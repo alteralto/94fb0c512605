@@ -7,10 +7,13 @@ module RoutingEngine
   # калибровки из истории. Новый провайдер добавляется просто дополнением
   # providers.json и (опционально) provider_overrides в конфиге — без правки кода.
   class ProviderPool
-    def initialize(providers_json:, overrides:, history:)
+    # self_provider_name задаётся конфигом (не хардкод в коде) — так решение не
+    # привязано к конкретному набору входных данных: переименуют self-provider
+    # в тестовых providers.json — достаточно поправить config/strategy.yml.
+    def initialize(providers_json:, overrides:, history:, self_provider_name:)
       @history = history
       raw_list = providers_json.fetch('providers')
-      @providers = raw_list.map { |raw| build(raw, overrides.fetch(raw['payment_system'], {})) }
+      @providers = raw_list.map { |raw| build(raw, overrides.fetch(raw['payment_system'], {}), self_provider_name) }
       seed_targets_and_state
     end
 
@@ -22,10 +25,15 @@ module RoutingEngine
       @providers.find { |p| p.payment_system == name }
     end
 
+    def self_provider
+      @providers.find(&:self_provider?)
+    end
+
     private
 
-    def build(raw, override)
+    def build(raw, override, self_provider_name)
       provider = Provider.new(raw)
+      provider.self_provider = (raw['payment_system'] == self_provider_name)
       provider.requests_per_minute_limit = override['requests_per_minute_limit']
       provider.daily_turnover_min = override['daily_turnover_min']
       provider

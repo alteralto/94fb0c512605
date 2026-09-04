@@ -175,7 +175,7 @@
         "provider": "payflow",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.225 (count_gap=0.183, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.185 (count_gap=0.150, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
       }
     ],
     "simulated_result": "approved",
@@ -201,7 +201,7 @@
         "provider": "quickpay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=0.531 (count_gap=-0.179, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.445 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
       }
     ],
     "simulated_result": "approved",
@@ -221,13 +221,13 @@
         "provider": "vipay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.177 (count_gap=0.150, volume_gap=-0.076, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.308 (count_gap=0.257, volume_gap=-0.072, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=0)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.445 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.385 (count_gap=-0.300, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
       }
     ],
     "simulated_result": "approved",
@@ -247,13 +247,13 @@
         "provider": "payflow",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.158 (count_gap=0.128, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.125 (count_gap=0.100, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.512 (count_gap=-0.194, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.445 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
       }
     ],
     "simulated_result": "approved",

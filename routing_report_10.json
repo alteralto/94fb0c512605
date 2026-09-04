@@ -31,9 +31,9 @@
   },
   "projected_daily_utilization": {
     "vipay": {
-      "used": 3287000,
+      "used": 3235000,
       "limit": 5000000,
-      "utilization_pct": 65.7
+      "utilization_pct": 64.7
     },
     "payflow": {
       "used": 2955800,

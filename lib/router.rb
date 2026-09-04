@@ -7,9 +7,10 @@ module RoutingEngine
   # Оркестрирует роутинг одной заявки:
   #  1) hard-constraints отсекают недопустимых провайдеров (attempts: skipped);
   #  2) оставшиеся ранжируются StrategyScorer по soft-goals;
-  #  3) идём по рангу сверху вниз, симулируя возможный отказ уже выбранного
-  #     провайдера в обработке — при отказе fallback на следующего по рангу;
-  #  4) если внешний пул исчерпан — fallback на self-provider (spacepayments);
+  #  3) идём по рангу сверху вниз, симулируя приём заявки в обработку — провайдер
+  #     может явно отказать (declined) или не ответить (timeout, требует идемпотентной
+  #     проверки статуса перед fallback) — при любом исходе fallback на следующего по рангу;
+  #  4) если внешний пул исчерпан — fallback на self-provider (имя из конфига);
   #  5) состояние выбранного провайдера обновляется, симулируется итог заявки.
   class Router
     def initialize(pool:, scorer_weights:, amount_bands:, simulator:)
@@ -27,8 +28,9 @@ module RoutingEngine
       selected = attempt_ranked_candidates(operation, eligible_ranked, attempts)
       selected ||= fallback_to_self_provider(operation, attempts)
 
-      selected.register_selection(operation)
+      selected.reserve!(operation)
       result = @simulator.final_result(selected)
+      selected.resolve!(operation, result)
       latency = @simulator.latency_sec(selected, result)
 
       {
@@ -64,10 +66,23 @@ module RoutingEngine
         provider = entry[:provider]
         provider.register_attempt(operation)
 
-        if @simulator.provider_declines?(provider)
+        case @simulator.pre_attempt_outcome(provider)
+        when :declined
           attempts << { 'provider' => provider.payment_system, 'decision' => 'skipped',
                          'reason' => 'provider_declined_processing',
-                         'details' => "#{score_details(entry)}; симулированный отказ при обработке" }
+                         'details' => "#{score_details(entry)}; провайдер явно отказал в обработке" }
+          next
+        when :timeout
+          # Кейс отдельно требует различать "отказал" и "не отвечает": при таймауте
+          # статус неизвестен, и слепой переход к следующему провайдеру рискует
+          # задвоить выплату. Перед fallback выполняется идемпотентная проверка
+          # статуса по operation_id (в проде — запрос к провайдеру с idempotency key;
+          # здесь — часть детерминированной симуляции), которая подтверждает,
+          # что операция НЕ была проведена, и только после этого — fallback.
+          attempts << { 'provider' => provider.payment_system, 'decision' => 'skipped',
+                         'reason' => 'provider_timeout_unknown_status',
+                         'details' => "#{score_details(entry)}; провайдер не ответил (таймаут); " \
+                                       'идемпотентная проверка статуса по operation_id — операция не проведена, fallback безопасен' }
           next
         end
 
@@ -88,7 +103,7 @@ module RoutingEngine
     end
 
     def fallback_to_self_provider(operation, attempts)
-      fallback = @pool.find('spacepayments')
+      fallback = @pool.self_provider
       fallback.register_attempt(operation)
       attempts << { 'provider' => fallback.payment_system, 'decision' => 'selected',
                      'reason' => 'fallback_self_provider',

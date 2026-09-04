@@ -30,7 +30,8 @@ providers_json = JSON.parse(File.read(providers_path))
 pool = RoutingEngine::ProviderPool.new(
   providers_json: providers_json,
   overrides: config['provider_overrides'] || {},
-  history: history
+  history: history,
+  self_provider_name: config['self_provider_name'] || 'spacepayments'
 )
 queue = JSON.parse(File.read(queue_path)).map { |raw| RoutingEngine::Operation.new(raw) }
 
