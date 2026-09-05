@@ -161,6 +161,12 @@ td:last-child, th:last-child { padding-right: 0; }
 
 figure { margin: 6px 0 18px; }
 figure svg { width: 100%; height: auto; display: block; }
+/* BPMN приходит в своём масштабе: сжимать его до ширины колонки — значит
+   сделать подписи нечитаемыми, поэтому даём натуральный размер и прокрутку.
+   Белая подложка нужна и в тёмной теме: нотация рисуется чёрным по белому. */
+.diagram-paper { overflow-x: auto; background: #ffffff; border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius); padding: 14px 16px; }
+.diagram-paper img { display: block; width: 1948px; max-width: none; height: auto; }
 figcaption { font-size: 11.5px; color: var(--ink-muted); margin-top: 8px; line-height: 1.45; }
 .box-fill { fill: var(--surface); }
 .box-line { stroke: var(--hairline-strong); fill: none; }
@@ -285,6 +291,17 @@ footer {
       </svg>
       <figcaption>Батч и стенд используют один и тот же <code>Pipeline</code>: то, что показывается на демо, и то, что уходит в сдаваемый файл, — это буквально один код.</figcaption>
     </figure>
+
+    <h3>Маршрутизация одной заявки</h3>
+    <p>Тот же процесс в нотации BPMN — с шлюзами, петлёй каскада и отдельной веткой
+    на случай, когда провайдер не ответил. Исходник <code>docs/routing-process.bpmn</code>
+    открывается в любом моделере.</p>
+    <figure>
+      <div class="diagram-paper">
+        <img src="/docs/routing-process.svg" alt="BPMN-схема маршрутизации заявки на выплату">
+      </div>
+      <figcaption>Схема шире колонки — прокрутите её вбок. Обратите внимание на две развилки после ответа провайдера: отказ ведёт сразу к следующему кандидату, а таймаут — сначала на сверку статуса по <code>operation_id</code>.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -333,6 +350,7 @@ footer {
         <tr><td>5. Конверсия</td><td class="mono">conversion</td><td>сглаженная оценка успешности</td><td class="num-col mono">0.5</td></tr>
         <tr><td>6. Текущая загрузка</td><td class="mono">load_headroom</td><td>запас до лимитов после этой заявки</td><td class="num-col mono">0.2</td></tr>
         <tr><td>7. Финобязательство</td><td class="mono">turnover_min_gap</td><td>недобор минимального дневного оборота</td><td class="num-col mono">1.5</td></tr>
+        <tr><td>Сверх ТЗ: комиссия</td><td class="mono">margin_advantage</td><td>сколько маржи остаётся площадке</td><td class="num-col mono">0.3</td></tr>
       </tbody>
     </table>
     </div>
@@ -425,14 +443,49 @@ footer {
 <section>
   <div class="num">08</div>
   <div>
+    <h2>Во что обходится распределение</h2>
+    <p>Маршрут — это деньги, поэтому комиссия участвует не только в допуске
+    («маржа не хуже соглашения»), но и в предпочтении: среди допущенных выгоднее тот,
+    кто оставляет площадке больше. Разброс тарифов в этом кейсе — 0.4 п.п.
+    (vipay 1.2%, payflow 1.0%, quickpay 0.8% при марже мерчанта 1.5%), что на дневном
+    лимите пула в 16 млн ₽ соответствует 64 000 ₽ в день.</p>
+
+    <h3>Замер по 40 сидам</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Вес <code>margin_advantage</code></th><th class="num-col">Эффективная ставка</th><th class="num-col">Переплата к дешёвому</th><th class="num-col">Отклонение от целей</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">0.0</td><td class="num-col">0.926%</td><td class="num-col">335 ₽</td><td class="num-col">23.0 п.п.</td></tr>
+        <tr><td class="mono">0.3 — принят</td><td class="num-col">0.925%</td><td class="num-col">334 ₽</td><td class="num-col">23.0 п.п.</td></tr>
+        <tr><td class="mono">0.5</td><td class="num-col">0.907%</td><td class="num-col">295 ₽</td><td class="num-col">36.2 п.п.</td></tr>
+        <tr><td class="mono">1.2</td><td class="num-col">0.913%</td><td class="num-col">296 ₽</td><td class="num-col">44.0 п.п.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout">
+      <span class="tag">вывод, который стоит сказать вслух</span>
+      <p>При заданных целевых долях экономия на комиссии почти исчерпана: план жёстче,
+      чем разброс тарифов. Переход от веса 0.3 к 0.5 экономит около 40 ₽ на десяти
+      заявках и стоит 13 п.п. плана — размен плохой, поэтому дефолт 0.3. Ценность здесь
+      не в самой экономии, а в том, что движок считает цену компромисса в рублях и
+      кладёт её в отчёт блоком <code>cost</code>: уплаченная комиссия, эффективная
+      ставка и переплата относительно самого дешёвого допустимого провайдера.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="num">09</div>
+  <div>
     <h2>Чем это проверено</h2>
     <div class="scroll-x">
     <table>
       <thead><tr><th>Проверка</th><th>Команда</th><th class="num-col">Результат</th></tr></thead>
       <tbody>
         <tr><td>Автопроверялка организаторов</td><td class="mono">ruby scripts/validate_10.rb</td><td class="num-col ok">29 / 29</td></tr>
-        <tr><td>Тесты движка</td><td class="mono">ruby test/routing_test.rb</td><td class="num-col ok">63 теста, 485 проверок</td></tr>
-        <tr><td>Доля Ruby в репозитории</td><td>—</td><td class="num-col ok">71.3%</td></tr>
+        <tr><td>Тесты движка</td><td class="mono">ruby test/routing_test.rb</td><td class="num-col ok">71 тест, 503 проверки</td></tr>
+        <tr><td>Доля Ruby в репозитории</td><td>—</td><td class="num-col ok">56.1% (по байтам, вместе со стендом)</td></tr>
         <tr><td>Размер файла решений</td><td>—</td><td class="num-col">8.6 КБ на 10 заявок</td></tr>
       </tbody>
     </table>
@@ -448,7 +501,7 @@ footer {
 </section>
 
 <section>
-  <div class="num">09</div>
+  <div class="num">10</div>
   <div>
     <h2>Допущения, сказанные вслух</h2>
     <ul>

@@ -28,7 +28,11 @@ HISTORY     = RoutingEngine::HistoryStats.new(File.join(ROOT, 'data', 'operation
 PROVIDERS   = JSON.parse(File.read(File.join(ROOT, 'data', 'providers.json')))
 QUEUE       = JSON.parse(File.read(File.join(ROOT, 'data', 'operations_queue_10.json')))
 
-MIME = { '.html' => 'text/html', '.css' => 'text/css', '.js' => 'application/javascript' }.freeze
+MIME = { '.html' => 'text/html', '.css' => 'text/css', '.js' => 'application/javascript',
+         '.svg' => 'image/svg+xml', '.png' => 'image/png', '.mp4' => 'video/mp4' }.freeze
+# Отдаём и web/, и docs/: страница разбора показывает BPMN-схему из docs/.
+SERVE_ROOTS = %w[web docs].freeze
+BINARY_EXT = %w[.png .mp4].freeze
 
 def run_pipeline(override)
   config = RoutingEngine::Pipeline.deep_merge(BASE_CONFIG, override)
@@ -58,10 +62,13 @@ def respond(client, status, body, content_type)
 end
 
 def serve_file(client, path)
-  file = File.join(ROOT, 'web', path)
-  return respond(client, '404 Not Found', 'not found', 'text/plain') unless File.file?(file)
+  file = SERVE_ROOTS.map { |root| File.join(ROOT, root, path.sub(%r{\A#{root}/}, '')) }
+                    .find { |candidate| File.file?(candidate) }
+  return respond(client, '404 Not Found', 'not found', 'text/plain') unless file
 
-  respond(client, '200 OK', File.read(file, encoding: 'UTF-8'), MIME.fetch(File.extname(file), 'text/plain'))
+  ext = File.extname(file)
+  body = BINARY_EXT.include?(ext) ? File.binread(file) : File.read(file, encoding: 'UTF-8')
+  respond(client, '200 OK', body, MIME.fetch(ext, 'text/plain'))
 end
 
 def handle(client)

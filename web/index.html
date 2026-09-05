@@ -181,6 +181,9 @@ input[type=number] {
 }
 .param-title:first-child { margin-top: 0; }
 .field label { display: block; font-size: 11px; color: var(--ink-muted); margin-bottom: 3px; }
+.switch { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-family: "Onest", sans-serif;
+  font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--ink-muted); cursor: pointer; }
+.switch input { accent-color: var(--accent); margin: 0; }
 
 .actions { display: flex; gap: 8px; margin-top: 16px; }
 .btn {
@@ -196,8 +199,9 @@ main { display: flex; flex-direction: column; gap: 18px; }
 /* Показатели не равнозначны: отклонение от целей и успешность — то, ради чего
    стенд крутят, остальное контекст. Разный размер, а не пять одинаковых плиток. */
 .kpis { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); }
-.kpi { background: var(--surface); padding: 14px 16px 15px; grid-column: span 4; }
+.kpi { background: var(--surface); padding: 14px 16px 15px; grid-column: span 3; }
 .kpi.lead { grid-column: span 6; }
+@media (max-width: 1200px) { .kpi { grid-column: span 6; } }
 @media (max-width: 900px) { .kpi, .kpi.lead { grid-column: span 12; } }
 .kpi .k { font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-muted); }
 /* Пропорциональные цифры: в конденсированном Alumni Sans табличные дают
@@ -379,6 +383,7 @@ const WEIGHTS = [
   ['amount_band',      'Диапазон суммы чека',  'стратегия 4 — бонус за попадание в свой диапазон'],
   ['conversion',       'Конверсия',            'стратегия 5 — предпочтение по conversion_24h'],
   ['load_headroom',    'Запас до лимитов',     'стратегия 6 — штраф провайдеру, подошедшему вплотную к лимиту'],
+  ['margin_advantage', 'Комиссия провайдера',  'сверх ТЗ — комиссия: среди допущенных выгоднее тот, кто дешевле'],
   ['turnover_min_gap', 'Мин. дневной оборот',  'стратегия 7 — недобор финобязательства']
 ];
 
@@ -396,6 +401,8 @@ const SCENARIOS = [
     override: { weights: w( { conversion: 3 } ) } },
   { id: 'load', name: 'Только текущая загрузка', note: 'стратегия 6 — payflow вошёл в очередь на 97% дневного лимита',
     override: { weights: w( { load_headroom: 3 } ) } },
+  { id: 'cost', name: 'Только комиссия', note: 'сверх ТЗ — гонимся за самым дешёвым допустимым',
+    override: { weights: w( { margin_advantage: 3 } ) } },
   { id: 'offline', name: 'Провайдер выключен', note: 'payflow отключён — его целевые 35% перераспределяются между доступными',
     override: { provider_overrides: { payflow: { status: 'disabled' } } } },
   { id: 'conflict', name: 'Конфликт из ТЗ', note: 'vipay упёрся в дневной лимит, payflow не добрал обязательство 2 млн',
@@ -508,7 +515,12 @@ function buildParams() {
     const ov = (STATE.base_config.provider_overrides || {})[p.payment_system] || {};
     const t = document.createElement('div');
     t.className = 'param-title';
-    t.innerHTML = `<span class="dot" style="background:${PROV_COLOR(p.payment_system)}"></span>${p.payment_system}`;
+    // Статус — обычное поле формы, а не скрытая настройка пресета: всё, что
+    // умеет менять сценарий, должно быть видно и руками. Раньше status приходил
+    // только из пресета, а buildOverride собирал override из формы — и выключение
+    // провайдера молча терялось.
+    t.innerHTML = `<span class="dot" style="background:${PROV_COLOR(p.payment_system)}"></span>${p.payment_system}` +
+      `<label class="switch"><input type="checkbox" id="p_${p.payment_system}_active" checked>активен</label>`;
     host.appendChild(t);
 
     const g = document.createElement('div');
@@ -564,6 +576,7 @@ function applyScenario(id) {
     setVal(`p_${p.payment_system}_turn`, scenOv.daily_turnover_min ?? baseOv.daily_turnover_min ?? 0);
     setVal(`p_${p.payment_system}_rpm`, scenOv.requests_per_minute_limit ?? baseOv.requests_per_minute_limit ?? '');
     setVal(`p_${p.payment_system}_day`, scenOv.daily_approved_amount ?? p.daily_approved_amount);
+    document.getElementById(`p_${p.payment_system}_active`).checked = (scenOv.status ?? p.status) !== 'disabled';
   });
 
   setVal('c_prior', s.override.conversion?.prior_strength ?? (STATE.base_config.conversion || {}).prior_strength ?? 10);
@@ -583,6 +596,7 @@ function buildOverride() {
   STATE.providers.providers.forEach(p => {
     if (p.payment_system === STATE.base_config.self_provider_name) return;
     provider_overrides[p.payment_system] = {
+      status: document.getElementById(`p_${p.payment_system}_active`).checked ? 'active' : 'disabled',
       daily_turnover_min: numOrNull(`p_${p.payment_system}_turn`) ?? 0,
       requests_per_minute_limit: numOrNull(`p_${p.payment_system}_rpm`),
       daily_approved_amount: numOrNull(`p_${p.payment_system}_day`) ?? p.daily_approved_amount
@@ -650,6 +664,7 @@ function renderKpis(run, rep, changed, withDelta) {
   const total = rep.total_operations || run.decisions.length;
   const res = rep.results || {};
   const drift = Object.values(rep.distribution).reduce((s, v) => s + Math.abs(v.share_pct - goal(v)), 0);
+  const cost = rep.cost || {};
   const cascaded = run.decisions.filter(d => d.attempts.some(a =>
     ['provider_declined_processing', 'provider_timeout_unknown_status'].includes(a.reason))).length;
 
@@ -657,6 +672,9 @@ function renderKpis(run, rep, changed, withDelta) {
   document.getElementById('kpis').innerHTML = [
     ['Отклонение от целей', pct(drift), 'п.п.', 'сумма модулей по провайдерам, меньше — точнее план', 'lead'],
     ['Успешность', pct(res.success_rate_pct ?? 0), '%', `${res.approved ?? 0} проведено, ${res.rejected ?? 0} отклонено`, 'lead'],
+    ['Комиссия', cost.effective_rate_pct === undefined ? '—' : pct(cost.effective_rate_pct), '%',
+      cost.overpay_vs_cheapest === undefined ? 'нет проведённых операций'
+        : `${fmt(cost.provider_fee)} ₽ с ${fmt(cost.approved_volume)} ₽; переплата к самому дешёвому ${fmt(cost.overpay_vs_cheapest)} ₽`, ''],
     ['Заявок', total, '', 'в очереди прогона', ''],
     ['Каскад сработал', cascaded, '', 'заявок ушло на повторную попытку', ''],
     ['Решения изменились', withDelta ? changed.size : '—', '',
