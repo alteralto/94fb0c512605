@@ -13,15 +13,21 @@ module RoutingEngine
   #  4) если внешний пул исчерпан — fallback на self-provider (имя из конфига);
   #  5) состояние выбранного провайдера обновляется, симулируется итог заявки.
   class Router
-    def initialize(pool:, scorer_weights:, amount_bands:, simulator:)
+    def initialize(pool:, scorer_weights:, amount_bands:, simulator:, load_settings: {})
       @pool = pool
       @weights = scorer_weights
       @amount_bands = amount_bands
+      @load_settings = load_settings || {}
       @simulator = simulator
     end
 
     def route(operation)
-      scorer = StrategyScorer.new(weights: @weights, amount_bands: @amount_bands, providers: @pool.all)
+      # Цели пересчитываются перед каждой заявкой: провайдер мог выбыть на
+      # предыдущей (исчерпать дневной лимит, остаться без реквизитов), и его
+      # долю должны подхватить оставшиеся, а не тянуть недостижимый план.
+      @pool.recompute_effective_targets
+      scorer = StrategyScorer.new(weights: @weights, amount_bands: @amount_bands,
+                                  providers: @pool.all, load: @load_settings)
       attempts = []
 
       eligible_ranked = rank_eligible(operation, scorer, attempts)
@@ -111,13 +117,18 @@ module RoutingEngine
       fallback
     end
 
+    # Объяснение выбора собирается из реестра факторов, а не из захардкоженного
+    # списка: показываем вклад каждого правила в итоговый балл (значение x вес),
+    # отсортированный по влиянию. Так по логу видно не только КТО победил,
+    # но и ЧТО именно перевесило — и имена совпадают с ключами весов в
+    # config/strategy.yml, то есть понятно, какой параметр крутить.
     def score_details(entry)
-      f = entry[:factors]
-      format(
-        'score=%.3f (count_gap=%.3f, volume_gap=%.3f, conversion=%.2f, cascade=%.3f, turnover_gap=%.3f, amount_band=%.0f)',
-        entry[:score], f[:count_share_gap], f[:volume_share_gap], f[:conversion], f[:cascade_priority],
-        f[:turnover_min_gap], f[:amount_band]
-      )
+      parts = entry[:factors]
+                .reject { |_name, f| f['contribution'].zero? }
+                .sort_by { |_name, f| -f['contribution'].abs }
+                .map { |name, f| format('%s %+.3f', name, f['contribution']) }
+      breakdown = parts.empty? ? 'все факторы обнулены весами' : parts.join(', ')
+      format('score=%.3f (%s)', entry[:score], breakdown)
     end
   end
 end

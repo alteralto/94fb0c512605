@@ -1,33 +1,33 @@
 [
   {
     "operation_id": "op_101",
-    "selected_provider": "payflow",
+    "selected_provider": "vipay",
     "attempts": [
       {
-        "provider": "payflow",
+        "provider": "vipay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.365 (count_gap=0.300, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.516 (cascade_priority +0.600, conversion +0.399, count_share_gap +0.360, load_headroom +0.200, volume_share_gap -0.043)"
       },
       {
-        "provider": "vipay",
+        "provider": "payflow",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=1.352 (count_gap=0.300, volume_gap=-0.085, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.250 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, load_headroom +0.028)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=1.045 (count_gap=0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.199 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
     "simulated_result": "approved",
-    "latency_sec": 77
+    "latency_sec": 52
   },
   {
     "operation_id": "op_102",
-    "selected_provider": "quickpay",
+    "selected_provider": "payflow",
     "attempts": [
       {
         "provider": "vipay",
@@ -36,20 +36,20 @@
         "details": "bank=alfa"
       },
       {
-        "provider": "quickpay",
+        "provider": "payflow",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.045 (count_gap=0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.239 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, load_headroom +0.017)"
       },
       {
-        "provider": "payflow",
+        "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.645 (count_gap=-0.300, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.199 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
-    "simulated_result": "approved",
-    "latency_sec": 55
+    "simulated_result": "rejected",
+    "latency_sec": 58
   },
   {
     "operation_id": "op_103",
@@ -71,11 +71,11 @@
         "provider": "quickpay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=0.845 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.599 (amount_band +0.400, conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
-    "simulated_result": "approved",
-    "latency_sec": 55
+    "simulated_result": "expired",
+    "latency_sec": 539
   },
   {
     "operation_id": "op_104",
@@ -97,7 +97,7 @@
         "provider": "quickpay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=0.385 (count_gap=-0.300, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.199 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
     "simulated_result": "approved",
@@ -117,17 +117,17 @@
         "provider": "vipay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.359 (count_gap=0.300, volume_gap=-0.072, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.036 (cascade_priority +0.600, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, volume_share_gap -0.043)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.385 (count_gap=-0.300, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.599 (conversion +0.349, count_share_gap -0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
-    "simulated_result": "approved",
-    "latency_sec": 52
+    "simulated_result": "rejected",
+    "latency_sec": 34
   },
   {
     "operation_id": "op_106",
@@ -143,17 +143,17 @@
         "provider": "vipay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.638 (count_gap=0.200, volume_gap=-0.074, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.436 (cascade_priority +0.600, amount_band +0.400, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, volume_share_gap -0.043)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.385 (count_gap=-0.300, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.599 (conversion +0.349, count_share_gap -0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
-    "simulated_result": "rejected",
-    "latency_sec": 34
+    "simulated_result": "approved",
+    "latency_sec": 52
   },
   {
     "operation_id": "op_107",
@@ -175,7 +175,7 @@
         "provider": "payflow",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.185 (count_gap=0.150, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.255 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, load_headroom +0.033)"
       }
     ],
     "simulated_result": "approved",
@@ -201,11 +201,11 @@
         "provider": "quickpay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=0.445 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.899 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
-    "simulated_result": "approved",
-    "latency_sec": 55
+    "simulated_result": "expired",
+    "latency_sec": 539
   },
   {
     "operation_id": "op_109",
@@ -221,13 +221,13 @@
         "provider": "vipay",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.308 (count_gap=0.257, volume_gap=-0.072, conversion=0.87, cascade=1.000, turnover_gap=0.000, amount_band=0)"
+        "details": "score=1.034 (cascade_priority +0.600, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, volume_share_gap -0.045)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.385 (count_gap=-0.300, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.899 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150)"
       }
     ],
     "simulated_result": "approved",
@@ -247,16 +247,16 @@
         "provider": "payflow",
         "decision": "selected",
         "reason": "top_ranked_by_strategy",
-        "details": "score=1.125 (count_gap=0.100, volume_gap=-0.300, conversion=0.91, cascade=0.500, turnover_gap=0.000, amount_band=1)"
+        "details": "score=1.062 (amount_band +0.400, conversion +0.312, cascade_priority +0.300, count_share_gap +0.180, volume_share_gap -0.150, load_headroom +0.020)"
       },
       {
         "provider": "quickpay",
         "decision": "skipped",
         "reason": "outranked_by_strategy_score",
-        "details": "score=0.445 (count_gap=-0.250, volume_gap=0.300, conversion=0.79, cascade=0.333, turnover_gap=0.000, amount_band=0)"
+        "details": "score=0.959 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, count_share_gap +0.060)"
       }
     ],
-    "simulated_result": "approved",
-    "latency_sec": 77
+    "simulated_result": "expired",
+    "latency_sec": 631
   }
 ]

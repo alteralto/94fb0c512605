@@ -29,6 +29,19 @@ module RoutingEngine
       (arr.sum.to_f / arr.size).round
     end
 
+    # Конверсия, фактически наблюдавшаяся в истории. nil, если провайдера
+    # в истории нет — тогда декларацию сверять не с чем.
+    def observed_conversion(provider)
+      s = stat(provider)
+      return nil if s.count.zero?
+
+      s.approved_count.to_f / s.count
+    end
+
+    def sample_size(provider)
+      stat(provider).count
+    end
+
     private
 
     def load(csv_path)

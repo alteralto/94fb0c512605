@@ -15,6 +15,14 @@ module RoutingEngine
     # Поля, которых нет в providers.json — заполняются ProviderPool
     # из config/strategy.yml (бизнес-параметры) и operations_history.csv (доля объёма).
     attr_accessor :volume_share_pct, :requests_per_minute_limit, :daily_turnover_min
+    # Цели после перераспределения доли недоступных провайдеров, см.
+    # ProviderPool#recompute_effective_targets. Исходные traffic_percentage /
+    # volume_share_pct сохраняются, чтобы отчёт мог показать обе величины.
+    attr_accessor :effective_traffic_pct, :effective_volume_share_pct
+    # conversion_24h из providers.json — это то, что провайдер о себе ЗАЯВЛЯЕТ.
+    # В скоринге и симуляции используется сглаженная оценка (декларация + история),
+    # а исходные величины хранятся, чтобы отчёт мог показать расхождение.
+    attr_accessor :declared_conversion_24h, :observed_conversion_24h, :observed_sample
     # Признак self-provider ставит ProviderPool по self_provider_name из конфига
     # (не хардкод "spacepayments" — при смене имени в тестовых данных ничего не сломается).
     attr_writer :self_provider
@@ -27,6 +35,11 @@ module RoutingEngine
     def initialize(raw)
       RAW_ATTRS.each { |a| send("#{a}=", raw[a.to_s]) }
       @banks ||= []
+      # Пока ProviderPool не пересчитал цели с поправкой на недоступных,
+      # эффективная цель равна заявленной — провайдер остаётся осмысленным
+      # и вне пула (тесты, ручные сценарии), без молчаливых нулей.
+      @effective_traffic_pct = traffic_percentage
+      @effective_volume_share_pct = volume_share_pct
       @self_provider = false
       @routed_count = 0
       @routed_volume = 0
@@ -35,6 +48,27 @@ module RoutingEngine
 
     def self_provider?
       @self_provider
+    end
+
+    # Недоступность, которая не зависит от конкретной заявки: такому провайдеру
+    # нельзя отдать НИ ОДНУ заявку очереди, сколько ни меняй веса стратегии.
+    # Возвращает причину или nil. Отличается от HardConstraints тем, что там
+    # проверка идёт по паре (провайдер, заявка) — сумма, банк, интенсивность.
+    def unavailable_reason
+      return "status=#{status}" unless status == 'active'
+      return 'нет свободных реквизитов' if available_requisites.to_i.zero?
+      if daily_amount_limit && daily_approved_amount.to_f >= daily_amount_limit.to_f
+        return "дневной лимит исчерпан (#{daily_approved_amount.to_i}/#{daily_amount_limit})"
+      end
+      unless allow_negative_agreement || provider_margin_pct.to_f <= merchant_margin_pct.to_f
+        return "маржа #{provider_margin_pct}% хуже соглашения #{merchant_margin_pct}%"
+      end
+
+      nil
+    end
+
+    def structurally_unavailable?
+      !unavailable_reason.nil?
     end
 
     def register_attempt(operation)
