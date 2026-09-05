@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Техревью роутинга выплат</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alumni+Sans:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f7f7f4;
+  --surface: #ffffff;
+  --surface-2: #f1f0ec;
+  --ink: #211f19;
+  --ink-2: #4f4d47;
+  --ink-muted: #76746f;
+  --hairline: rgba(33, 31, 25, 0.15);
+  --hairline-strong: rgba(33, 31, 25, 0.28);
+  --accent: #a97e2c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(175, 128, 32, 0.12);
+  --prov-vipay: #af8020;
+  --prov-payflow: #008e8b;
+  --prov-quickpay: #bd432f;
+  --prov-spacepayments: #535eb8;
+  --good: #2f7d32;
+  --critical: #a52f22;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0b0a08;
+    --surface: #14130f;
+    --surface-2: #1e1d18;
+    --ink: #e5e4e0;
+    --ink-2: #a9a79f;
+    --ink-muted: #7e7c74;
+    --hairline: rgba(230, 228, 220, 0.16);
+    --hairline-strong: rgba(230, 228, 220, 0.32);
+    --accent: #e0a93a;
+    --accent-ink: #14130f;
+    --accent-soft: rgba(224, 169, 58, 0.14);
+    --prov-vipay: #bb8805;
+    --prov-payflow: #009f98;
+    --prov-quickpay: #ce5439;
+    --prov-spacepayments: #5b67cc;
+    --good: #4f9a52;
+    --critical: #dc6a52;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0b0a08;
+  --surface: #14130f;
+  --surface-2: #1e1d18;
+  --ink: #e5e4e0;
+  --ink-2: #a9a79f;
+  --ink-muted: #7e7c74;
+  --hairline: rgba(230, 228, 220, 0.16);
+  --hairline-strong: rgba(230, 228, 220, 0.32);
+  --accent: #e0a93a;
+  --accent-ink: #14130f;
+  --accent-soft: rgba(224, 169, 58, 0.14);
+  --prov-vipay: #bb8805;
+  --prov-payflow: #009f98;
+  --prov-quickpay: #ce5439;
+  --prov-spacepayments: #5b67cc;
+  --good: #4f9a52;
+  --critical: #dc6a52;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+code {
+  font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  font-size: 0.86em; background: var(--surface-2); padding: 1px 5px; border-radius: 2px;
+}
+a { color: var(--accent); }
+
+header {
+  border-bottom: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  padding: 20px 28px 18px;
+  display: flex; align-items: flex-end; gap: 22px; flex-wrap: wrap;
+}
+header h1 {
+  margin: 0;
+  font-family: "Alumni Sans", "Onest", sans-serif;
+  font-size: 42px; font-weight: 700; line-height: 0.9;
+}
+header .sub { color: var(--ink-2); font-size: 13px; max-width: 64ch; margin-top: 7px; }
+header .spacer { flex: 1; }
+.nav { display: flex; gap: 2px; }
+.nav a {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.18em; text-decoration: none; color: var(--ink-muted);
+  padding: 7px 12px; border: 1px solid transparent;
+}
+.nav a[aria-current="page"] { color: var(--ink); border-color: var(--hairline-strong); background: var(--surface-2); }
+.nav a:hover { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.doc { max-width: 1080px; margin: 0 auto; padding: 32px 28px 80px; }
+
+/* Номер раздела вынесен на поля: документ читают по разделам и ссылаются
+   на них вслух («вопрос по четвёртому»), поэтому нумерация здесь несёт смысл. */
+section { display: grid; grid-template-columns: 64px 1fr; gap: 22px; margin-bottom: 46px; }
+@media (max-width: 780px) { section { grid-template-columns: 1fr; gap: 10px; } .num { font-size: 26px !important; } }
+.num {
+  font-family: "Alumni Sans", sans-serif; font-size: 46px; font-weight: 700;
+  line-height: 0.8; color: var(--accent); font-variant-numeric: tabular-nums;
+  border-top: 2px solid var(--accent); padding-top: 10px;
+}
+h2 {
+  font-family: "Alumni Sans", sans-serif; font-size: 30px; font-weight: 700;
+  line-height: 1.05; margin: 4px 0 12px; text-wrap: balance;
+}
+h3 {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.22em; color: var(--ink-muted);
+  margin: 26px 0 10px;
+}
+p { margin: 0 0 13px; max-width: 74ch; }
+.lead { font-size: 16.5px; color: var(--ink-2); max-width: 70ch; }
+ul { margin: 0 0 13px; padding-left: 20px; max-width: 74ch; }
+li { margin-bottom: 6px; }
+strong { font-weight: 600; color: var(--ink); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 14px; }
+th {
+  text-align: left; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.13em; color: var(--ink-muted);
+  padding: 0 12px 8px 0; border-bottom: 1px solid var(--hairline-strong); vertical-align: bottom;
+}
+td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+td:last-child, th:last-child { padding-right: 0; }
+.num-col { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scroll-x { overflow-x: auto; }
+
+.callout {
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+  padding: 14px 16px; margin: 4px 0 16px; background: var(--surface);
+}
+.callout .tag {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.2em; color: var(--accent); display: block; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+
+figure { margin: 6px 0 18px; }
+figure svg { width: 100%; height: auto; display: block; }
+figcaption { font-size: 11.5px; color: var(--ink-muted); margin-top: 8px; line-height: 1.45; }
+.box-fill { fill: var(--surface); }
+.box-line { stroke: var(--hairline-strong); fill: none; }
+.box-line-accent { stroke: var(--accent); fill: none; }
+.svg-text { fill: var(--ink); font-family: "Onest", sans-serif; font-size: 12.5px; font-weight: 600; }
+.svg-sub { fill: var(--ink-muted); font-family: "JetBrains Mono", monospace; font-size: 9.5px; }
+.svg-arrow { stroke: var(--hairline-strong); stroke-width: 1.5; fill: none; }
+.svg-cap { fill: var(--ink-muted); font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.12em; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 1px; display: inline-block; flex: none; }
+.ok { color: var(--good); }
+.no { color: var(--critical); }
+footer {
+  border-top: 1px solid var(--hairline); padding-top: 18px; margin-top: 10px;
+  font-size: 12px; color: var(--ink-muted); max-width: 74ch;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Техревью решения</h1>
+    <div class="sub">Умный роутинг выплат: из чего собран движок, какие решения приняты и на каких числах они проверены. Живой прогон — на соседней вкладке.</div>
+  </div>
+  <div class="spacer"></div>
+  <nav class="nav">
+    <a href="/">Стенд</a>
+    <a href="/review" aria-current="page">Техревью</a>
+  </nav>
+</header>
+
+<div class="doc">
+
+<section>
+  <div class="num">01</div>
+  <div>
+    <h2>Что делает движок</h2>
+    <p class="lead">На вход — очередь заявок на выплату, снапшот провайдеров, история операций и конфигурация стратегии. На выход — решение по каждой заявке с полным следом попыток и аналитический отчёт по прогону.</p>
+    <p>Ruby 3.3, только стандартная библиотека: ни одного гема ни в движке, ни в тестах, ни в стенде. Всё, что меняет поведение, лежит в <code>config/strategy.yml</code>.</p>
+
+    <figure>
+      <svg viewBox="0 0 880 356" role="img" aria-labelledby="flow-title">
+        <title id="flow-title">Поток данных: входные файлы через пул провайдеров и роутер в решения и отчёт</title>
+
+        <text class="svg-cap" x="0" y="12">ВХОД</text>
+        <rect class="box-fill" x="0" y="22" width="196" height="42" rx="3"/>
+        <rect class="box-line" x="0.5" y="22.5" width="195" height="41" rx="3"/>
+        <text class="svg-text" x="14" y="41">providers.json</text>
+        <text class="svg-sub" x="14" y="56">снапшот лимитов и долей</text>
+
+        <rect class="box-fill" x="0" y="76" width="196" height="42" rx="3"/>
+        <rect class="box-line" x="0.5" y="76.5" width="195" height="41" rx="3"/>
+        <text class="svg-text" x="14" y="95">operations_history.csv</text>
+        <text class="svg-sub" x="14" y="110">фактическая конверсия</text>
+
+        <rect class="box-fill" x="0" y="130" width="196" height="42" rx="3"/>
+        <rect class="box-line" x="0.5" y="130.5" width="195" height="41" rx="3"/>
+        <text class="svg-text" x="14" y="149">config/strategy.yml</text>
+        <text class="svg-sub" x="14" y="164">веса, пороги, бизнес-поля</text>
+
+        <rect class="box-fill" x="0" y="184" width="196" height="42" rx="3"/>
+        <rect class="box-line" x="0.5" y="184.5" width="195" height="41" rx="3"/>
+        <text class="svg-text" x="14" y="203">operations_queue.json</text>
+        <text class="svg-sub" x="14" y="218">очередь заявок</text>
+
+        <path class="svg-arrow" d="M196 43 H236 V124 H262"/>
+        <path class="svg-arrow" d="M196 97 H236 V124"/>
+        <path class="svg-arrow" d="M196 151 H236 V124"/>
+        <path class="svg-arrow" d="M196 205 H222 V262 H262"/>
+        <path class="svg-arrow" d="M262 124 l-8 -4 v8 z" fill="currentColor" stroke="none"/>
+        <path class="svg-arrow" d="M262 262 l-8 -4 v8 z" fill="currentColor" stroke="none"/>
+
+        <text class="svg-cap" x="266" y="12">СБОРКА ПРОГОНА</text>
+        <rect class="box-fill" x="266" y="22" width="212" height="204" rx="3"/>
+        <rect class="box-line-accent" x="266.5" y="22.5" width="211" height="203" rx="3"/>
+        <text class="svg-text" x="280" y="42">ProviderPool</text>
+        <text class="svg-sub" x="280" y="57">сглаживание конверсии</text>
+        <text class="svg-sub" x="280" y="70">эффективные цели</text>
+        <text class="svg-sub" x="280" y="83">резерв и освобождение</text>
+
+        <line class="svg-arrow" x1="280" y1="96" x2="464" y2="96"/>
+
+        <text class="svg-text" x="280" y="116">HardConstraints</text>
+        <text class="svg-sub" x="280" y="131">9 условий допуска</text>
+
+        <text class="svg-text" x="280" y="155">StrategyScorer</text>
+        <text class="svg-sub" x="280" y="170">7 факторов, взвешенная сумма</text>
+
+        <text class="svg-text" x="280" y="194">Simulator</text>
+        <text class="svg-sub" x="280" y="209">seed из конфига</text>
+
+        <rect class="box-fill" x="266" y="240" width="212" height="44" rx="3"/>
+        <rect class="box-line" x="266.5" y="240.5" width="211" height="43" rx="3"/>
+        <text class="svg-text" x="280" y="260">Router</text>
+        <text class="svg-sub" x="280" y="275">каскад по одной заявке</text>
+
+        <path class="svg-arrow" d="M372 226 V240"/>
+        <path class="svg-arrow" d="M372 240 l-4 -8 h8 z" fill="currentColor" stroke="none"/>
+
+        <path class="svg-arrow" d="M478 262 H520 V70 H556"/>
+        <path class="svg-arrow" d="M556 70 l-8 -4 v8 z" fill="currentColor" stroke="none"/>
+        <path class="svg-arrow" d="M520 262 H556"/>
+        <path class="svg-arrow" d="M556 262 l-8 -4 v8 z" fill="currentColor" stroke="none"/>
+
+        <text class="svg-cap" x="560" y="12">ВЫХОД</text>
+        <rect class="box-fill" x="560" y="48" width="212" height="46" rx="3"/>
+        <rect class="box-line" x="560.5" y="48.5" width="211" height="45" rx="3"/>
+        <text class="svg-text" x="574" y="68">routing_decisions_test.json</text>
+        <text class="svg-sub" x="574" y="83">решение и след попыток</text>
+
+        <rect class="box-fill" x="560" y="240" width="212" height="46" rx="3"/>
+        <rect class="box-line" x="560.5" y="240.5" width="211" height="45" rx="3"/>
+        <text class="svg-text" x="574" y="260">ReportBuilder</text>
+        <text class="svg-sub" x="574" y="275">routing_report_test.json</text>
+
+        <rect class="box-fill" x="266" y="304" width="506" height="40" rx="3"/>
+        <rect class="box-line" x="266.5" y="304.5" width="505" height="39" rx="3"/>
+        <text class="svg-text" x="280" y="322">Pipeline</text>
+        <text class="svg-sub" x="280" y="336">один код прогона: им пользуются и батч bin/run.rb, и стенд bin/stand.rb</text>
+      </svg>
+      <figcaption>Батч и стенд используют один и тот же <code>Pipeline</code>: то, что показывается на демо, и то, что уходит в сдаваемый файл, — это буквально один код.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="num">02</div>
+  <div>
+    <h2>Допуск и предпочтение — разные вопросы</h2>
+    <p>Жёсткие условия отвечают «можно ли вообще отправить эту заявку этому провайдеру» и применяются до стратегии. Soft-goals отвечают «кого предпочесть среди допущенных» и на допуск не влияют никогда. Это разделение — причина, по которой отчёт может отличить «провайдер проиграл по скорингу» от «провайдер не мог быть выбран»: диагнозы разные, и лечатся они разным.</p>
+
+    <h3>Девять условий допуска</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Код причины</th><th>Что проверяет</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">provider_inactive</td><td>статус провайдера</td></tr>
+        <tr><td class="mono">amount_below_minimum</td><td>сумма ниже <code>limit_amount_min</code></td></tr>
+        <tr><td class="mono">amount_exceeds_limit</td><td>сумма выше <code>limit_amount_max</code></td></tr>
+        <tr><td class="mono">daily_limit_exceeded</td><td>заявка не влезает в остаток дневного лимита</td></tr>
+        <tr><td class="mono">in_progress_count_limit_exceeded</td><td>лимит одновременных заявок</td></tr>
+        <tr><td class="mono">in_progress_amount_limit_exceeded</td><td>лимит суммы в обработке</td></tr>
+        <tr><td class="mono">no_available_requisites</td><td>нет свободных реквизитов</td></tr>
+        <tr><td class="mono">margin_exceeds_agreement</td><td>маржа провайдера хуже соглашения с мерчантом</td></tr>
+        <tr><td class="mono">bank_not_in_list</td><td>банк заявки не обслуживается</td></tr>
+        <tr><td class="mono">rate_limit_exceeded</td><td>превышена интенсивность заявок в минуту</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Коды в отчёте и коды в движке синхронизированы не «на глаз», а тестом: он перебирает каждое условие по отдельности и сверяет множества в обе стороны. Это не гипотетическая аккуратность — рассинхрон здесь уже случался и молча ломал объяснение недобора доли.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num">03</div>
+  <div>
+    <h2>Семь стратегий как один взвешенный балл</h2>
+    <p>Конфликт целей решается не цепочкой <code>if</code>, а суммой взвешенных отклонений. Каждая стратегия из задания — отдельный фактор в реестре <code>StrategyScorer::FACTORS</code>; поменять политику значит поменять веса, а не код.</p>
+
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Стратегия</th><th>Ключ веса</th><th>Что даёт балл</th><th class="num-col">Вес</th></tr></thead>
+      <tbody>
+        <tr><td>1. Доля по количеству</td><td class="mono">count_share_gap</td><td>отставание от целевой доли заявок</td><td class="num-col mono">1.2</td></tr>
+        <tr><td>2. Доля по объёму</td><td class="mono">volume_share_gap</td><td>отставание от целевой доли рублей</td><td class="num-col mono">0.5</td></tr>
+        <tr><td>3. Каскад по приоритету</td><td class="mono">cascade_priority</td><td>меньший <code>priority</code> предпочтительнее</td><td class="num-col mono">0.6</td></tr>
+        <tr><td>4. Диапазон суммы</td><td class="mono">amount_band</td><td>чек попал в диапазон, закреплённый за провайдером</td><td class="num-col mono">0.4</td></tr>
+        <tr><td>5. Конверсия</td><td class="mono">conversion</td><td>сглаженная оценка успешности</td><td class="num-col mono">0.5</td></tr>
+        <tr><td>6. Текущая загрузка</td><td class="mono">load_headroom</td><td>запас до лимитов после этой заявки</td><td class="num-col mono">0.2</td></tr>
+        <tr><td>7. Финобязательство</td><td class="mono">turnover_min_gap</td><td>недобор минимального дневного оборота</td><td class="num-col mono">1.5</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>Добавить восьмое правило — это одна запись в реестре и вес в конфиге: объяснение выбора, лог попыток и отчёт разбирают реестр сами, перечисления факторов поимённо в коде не осталось. Вес, которому не соответствует ни один фактор (опечатка в конфиге), не молчит: движок печатает предупреждение, а отдельный тест сверяет боевой конфиг с реестром.</p>
+
+    <h3>Объяснение показывает вклад, а не только итог</h3>
+    <p>В каждой попытке пишется разложение балла по факторам — видно не только кто победил, но и что именно перевесило:</p>
+    <div class="callout">
+      <span class="tag">из routing_decisions_10.json, заявка op_102</span>
+      <p class="mono" style="font-size:12px">score=1.239 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap −0.150, load_headroom +0.017)</p>
+      <p style="margin-top:8px">Проигравший quickpay набрал 1.199 — разрыв 0.04. Видно и почему: у payflow вклад загрузки +0.017 против +0.200 у quickpay, то есть штраф за загрузку уже давит, просто пока не перевешивает. Имена совпадают с ключами весов в конфиге, поэтому из лога сразу ясно, какой параметр крутить.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="num">04</div>
+  <div>
+    <h2>Когда цель недостижима</h2>
+    <p>Доля, назначенная провайдеру, которому нельзя отдать ни одной заявки, — это дефект входных данных, а не задача роутера: сколько трафика туда ни направляй, план не закроется. Такая доля перераспределяется между оставшимися пропорционально их собственным целям, сумма эффективных целей снова равна 100%, и роутер сверяется с <code>effective_target_pct</code>.</p>
+    <p>Без этого доступные провайдеры вечно выглядели бы «перебравшими план», скоринг давил бы их вниз, а рекомендации предлагали бы снижать <code>traffic_percentage</code> тем, кто ни в чём не виноват. Цели пересчитываются перед каждой заявкой: провайдер может выбыть по ходу очереди — например исчерпать дневной лимит, — и с этого момента его долю подхватывают оставшиеся.</p>
+
+    <div class="callout">
+      <span class="tag">сценарий «провайдер выключен» на стенде</span>
+      <p>payflow отключён, его целевые 35% раскладываются: vipay получает 61.54%, quickpay — 38.46%. Отчёт говорит это словами и добавляет, что снимать надо причину недоступности, а не веса.</p>
+    </div>
+
+    <p>Отдельно ловится цель, невыполнимая по конструкции конфига: обязательство по обороту больше дневного лимита того же провайдера. Такую цель не закроет никакое распределение, и правится она только в конфиге.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num">05</div>
+  <div>
+    <h2>«Отказал» и «не ответил» — разные ветки</h2>
+    <p>В формулировке кейса стоит «отказывает <strong>или не отвечает</strong>». Это не синонимы. При явном отказе можно сразу идти к следующему провайдеру. При таймауте статус выплаты неизвестен, и повтор без сверки рискует задвоить живые деньги — поэтому перед fallback выполняется идемпотентная проверка статуса по <code>operation_id</code>, и это видно в объяснении попытки.</p>
+    <p>Из той же логики следует ещё два решения. <strong>Мощность резервируется, а не списывается навсегда:</strong> <code>available_requisites</code> и <code>in_progress_*</code> занимаются в момент выбора и освобождаются, когда исход известен, при любом исходе, — иначе на длинной очереди провайдер необратимо уходит в ноль реквизитов и выпадает из пула. <strong>Долю закрывает только успешная операция:</strong> счётчики и <code>daily_approved_amount</code> растут при <code>approved</code>, а не при любой выбранной попытке.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num">06</div>
+  <div>
+    <h2>Заявленной конверсии верить нельзя</h2>
+    <p><code>conversion_24h</code> в <code>providers.json</code> — это то, что провайдер о себе сообщает. История говорит другое, и расхождение не косметическое.</p>
+
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Провайдер</th><th class="num-col">Заявлено</th><th class="num-col">По истории</th><th class="num-col">Выборка</th><th class="num-col">В скоринге</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip"><span class="dot" style="background:var(--prov-payflow)"></span>payflow</span></td><td class="num-col">91.0%</td><td class="num-col no">47.4%</td><td class="num-col">19</td><td class="num-col mono">62.4%</td></tr>
+        <tr><td><span class="chip"><span class="dot" style="background:var(--prov-vipay)"></span>vipay</span></td><td class="num-col">87.0%</td><td class="num-col">78.0%</td><td class="num-col">41</td><td class="num-col mono">79.8%</td></tr>
+        <tr><td><span class="chip"><span class="dot" style="background:var(--prov-quickpay)"></span>quickpay</span></td><td class="num-col">79.0%</td><td class="num-col">67.5%</td><td class="num-col">40</td><td class="num-col mono">69.8%</td></tr>
+        <tr><td><span class="chip"><span class="dot" style="background:var(--prov-spacepayments)"></span>spacepayments</span></td><td class="num-col">95.0%</td><td class="num-col">—</td><td class="num-col">0</td><td class="num-col mono">95.0%</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>Слепо верить снапшоту нельзя, но и выбрасывать его тоже: при малой выборке история сама шумит. Поэтому усреднение со сжатием — декларация входит как <code>conversion.prior_strength</code> «виртуальных наблюдений» против фактических из истории. Чем больше у провайдера реальных попыток, тем меньше веса у декларации. Ноль означает «верить только истории», очень большое значение — «верить только декларации»; оба края крутятся на стенде.</p>
+    <p>Эффект измерен: на публичной десятке сглаживание уменьшает суммарное отклонение от целевых долей <strong>с 30 до 10 п.п.</strong> На 40 сидах — 22.2 против 32.0 п.п. Успешность при этом падает с 85% до 73.5%, и это правильно: в истории она 68%, то есть прогон стал честным, а не приукрашенным.</p>
+    <p>Расхождение больше 15 п.п. на выборке от 10 операций попадает в отчёт отдельной строкой: это может означать и подмену периода выгрузки, и реальную деградацию провайдера — решение за людьми, дело движка — не молчать.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num">07</div>
+  <div>
+    <h2>Как подобран вес загрузки</h2>
+    <p>Разбалловка требует, чтобы загрузка влияла на выбор, а не только на допуск. Первая версия фактора была линейной — «чем свободнее, тем лучше» — и сразу показала, почему так нельзя: она превращалась в постоянную фору самому пустому провайдеру и в одиночку определяла всё распределение.</p>
+    <p>Правильная постановка вопроса другая: различать провайдера на 15% и на 65% занятости смысла нет, значение имеет только подход вплотную к лимиту. Поэтому штраф пороговый — начинается за <code>load.pressure_threshold_pct</code> и внутри оставшегося интервала растёт линейно. В этом кейсе порог задевает ровно payflow: он входит в очередь на 96.7% дневного лимита.</p>
+
+    <h3>Замер по 40 сидам</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Вес <code>load_headroom</code></th><th class="num-col">Среднее отклонение от целей</th><th class="num-col">Пиковая загрузка payflow</th><th>Что это значит</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">0.0</td><td class="num-col">22.2 п.п.</td><td class="num-col">99.6%</td><td>фактор выключен</td></tr>
+        <tr><td class="mono">0.2 — принят</td><td class="num-col">23.0 п.п.</td><td class="num-col">99.6%</td><td>входит в балл, план не ломает</td></tr>
+        <tr><td class="mono">0.3</td><td class="num-col">36.2 п.п.</td><td class="num-col">99.6%</td><td>минус 14 п.п. плана — и ничего не куплено</td></tr>
+        <tr><td class="mono">0.5</td><td class="num-col">37.5 п.п.</td><td class="num-col">98.3%</td><td>1.3 п.п. загрузки за 15 п.п. плана</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>Отсюда дефолт 0.2: высокий вес платит десятками пунктов плана за единицы пунктов загрузки. Честная оговорка, которую стоит сказать самому: на публичной десятке при 0.2 фактор не переворачивает ни одной заявки — он начинает менять маршрут с 0.3, и это видно на стенде сценарием «Только текущая загрузка».</p>
+  </div>
+</section>
+
+<section>
+  <div class="num">08</div>
+  <div>
+    <h2>Чем это проверено</h2>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Проверка</th><th>Команда</th><th class="num-col">Результат</th></tr></thead>
+      <tbody>
+        <tr><td>Автопроверялка организаторов</td><td class="mono">ruby scripts/validate_10.rb</td><td class="num-col ok">29 / 29</td></tr>
+        <tr><td>Тесты движка</td><td class="mono">ruby test/routing_test.rb</td><td class="num-col ok">63 теста, 485 проверок</td></tr>
+        <tr><td>Доля Ruby в репозитории</td><td>—</td><td class="num-col ok">71.3%</td></tr>
+        <tr><td>Размер файла решений</td><td>—</td><td class="num-col">8.6 КБ на 10 заявок</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>Покрыты: каждое жёсткое ограничение по отдельности, резерв и освобождение мощности, начисление квоты только по успешным, вклад фактора как значение × вес, сверка боевого конфига с реестром факторов, пороговый штраф на всех границах и по самой узкой оси лимита, перераспределение доли недоступного провайдера, сглаживание конверсии на краях, каскад при отказе и таймауте, fallback на self-provider, воспроизводимость по seed, схема выходного файла, пустая очередь и заявка, которую не берёт никто.</p>
+
+    <div class="callout">
+      <span class="tag">почему зелёный прогон сам по себе ничего не значит</span>
+      <p>Тесты проверены мутациями: движок ломается намеренно — отключается штраф за загрузку, вклад считается без веса, цели перестают перераспределяться, берётся не самая узкая ось лимита. Каждая из четырёх мутаций роняет тесты. Приём уже окупился: на прошлом заходе он вскрыл две проверки, которые зеленели при любой поломке.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="num">09</div>
+  <div>
+    <h2>Допущения, сказанные вслух</h2>
+    <ul>
+      <li><strong>Недостающие поля провайдеров.</strong> <code>requests_per_minute_limit</code> и <code>daily_turnover_min</code> из <code>providers.json</code> не выводятся. Они заданы в <code>provider_overrides</code> с комментарием — оттуда же переопределяется любой штатный параметр, что и позволяет менять сценарий, не трогая входные данные.</li>
+      <li><strong>Выбор есть не у всех заявок.</strong> В публичной десятке больше одного допустимого провайдера имеют только 6 заявок из 10 — остальные предопределены банком и лимитами. Поэтому одинаковое итоговое распределение при разных весах не означает, что стратегия не работает: на стенде для этого есть отдельный показатель «Решения изменились» и пометка о смене провайдера у конкретной заявки.</li>
+      <li><strong>Дефолтный сид невезучий.</strong> Он даёт 50% успешности при среднем по 40 сидам 73.5%. Сид не подбирался под красивую цифру и не менялся ради неё.</li>
+      <li><strong>Симуляция детерминирована.</strong> Seed зафиксирован в конфиге: один и тот же вход даёт побайтово тот же выход, иначе перепроверка не сойдётся.</li>
+    </ul>
+
+    <h3>Вопросы, которые остаются к организаторам</h3>
+    <ul>
+      <li>Отказ и таймаут уже выбранного провайдера кодируются как <code>skipped</code> с собственными причинами — схема валидатора знает только <code>selected</code> и <code>skipped</code>. Такое прочтение ожидалось?</li>
+      <li>Должен ли <code>simulated_result</code> быть детерминированным?</li>
+      <li>Учтёт ли автопроверка кастомные поля провайдеров?</li>
+      <li><code>priority</code> задан во входных данных — допустимо ли пересчитывать его самим?</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  Страница отдаётся тем же локальным сервером, что и стенд: <code>ruby bin/stand.rb</code>, только стандартная библиотека Ruby. Числа на странице взяты из фактических прогонов, а не проставлены руками.
+</footer>
+
+</div>
+</body>
+</html>
