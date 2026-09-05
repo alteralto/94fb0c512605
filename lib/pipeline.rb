@@ -49,7 +49,7 @@ module RoutingEngine
       queue = @queue_raw.map { |raw| Operation.new(raw) }
 
       decisions = queue.map { |operation| router.route(operation) }
-      report = ReportBuilder.new(pool: pool, decisions: decisions, period: @period).build
+      report = ReportBuilder.new(pool: pool, decisions: decisions, period: @period, operations: queue).build
 
       Result.new(decisions: decisions, report: report, pool: pool, config: @config)
     end

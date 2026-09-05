@@ -37,10 +37,13 @@ module RoutingEngine
     # разные диагнозы и разные лечения.
     BLOCKING_REASONS = REASON_LABEL.keys.freeze
 
-    def initialize(pool:, decisions:, period:)
+    def initialize(pool:, decisions:, period:, operations: [])
       @pool = pool
       @decisions = decisions
       @period = period
+      # Суммы заявок нужны, чтобы посчитать стоимость распределения; сам список
+      # решений сумм не содержит, поэтому очередь передаётся отдельно.
+      @amounts = (operations || []).to_h { |op| [op.operation_id, op.amount] }
     end
 
     def build
@@ -49,6 +52,7 @@ module RoutingEngine
         'total_operations' => @decisions.size,
         'distribution' => distribution,
         'results' => results,
+        'cost' => cost,
         'provider_quality' => provider_quality,
         'skip_reasons' => skip_reasons,
         'projected_daily_utilization' => utilization,
@@ -86,6 +90,35 @@ module RoutingEngine
         'rejected' => counts['rejected'],
         'expired' => counts['expired'],
         'success_rate_pct' => total.zero? ? 0.0 : (counts['approved'].to_f / total * 100).round(1)
+      }
+    end
+
+    # Во что обошлось распределение. Комиссия платится за проведённые операции,
+    # поэтому считаем по approved. Справочный минимум — если бы весь этот объём
+    # взял самый дешёвый внешний провайдер; он почти всегда недостижим (лимиты,
+    # банки, доли), но показывает цену компромиссов в рублях, а не в процентах.
+    def cost
+      return {} if @amounts.empty?
+
+      approved = @decisions.select { |d| d['simulated_result'] == 'approved' }
+      volume = approved.sum { |d| @amounts.fetch(d['operation_id'], 0).to_f }
+      return {} if volume.zero?
+
+      fee = approved.sum do |d|
+        amount = @amounts.fetch(d['operation_id'], 0).to_f
+        rate = @pool.find(d['selected_provider'])&.provider_margin_pct.to_f
+        amount * rate / 100.0
+      end
+
+      cheapest = @pool.all.reject(&:self_provider?).map { |p| p.provider_margin_pct.to_f }.min.to_f
+      floor = volume * cheapest / 100.0
+      {
+        'approved_volume' => volume.round,
+        'provider_fee' => fee.round,
+        'effective_rate_pct' => (fee / volume * 100).round(3),
+        'cheapest_rate_pct' => cheapest,
+        'fee_at_cheapest' => floor.round,
+        'overpay_vs_cheapest' => (fee - floor).round
       }
     end
 

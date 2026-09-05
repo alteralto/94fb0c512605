@@ -284,6 +284,89 @@ class LoadPressureTest < Minitest::Test
   end
 end
 
+# Стратегия «комиссия»: среди допущенных выгоднее тот, кто оставляет больше маржи.
+class MarginAdvantageTest < Minitest::Test
+  def scorer(providers)
+    RoutingEngine::StrategyScorer.new(weights: { 'margin_advantage' => 1.0 }, amount_bands: [],
+                                      providers: providers)
+  end
+
+  def test_cheaper_provider_scores_higher
+    cheap = Fixtures.provider('payment_system' => 'cheap', 'provider_margin_pct' => 0.5)
+    dear  = Fixtures.provider('payment_system' => 'dear', 'provider_margin_pct' => 1.4)
+    s = scorer([cheap, dear])
+    assert s.score(cheap, Fixtures.operation).first > s.score(dear, Fixtures.operation).first
+  end
+
+  def test_value_is_share_of_merchant_margin_left
+    p = Fixtures.provider('provider_margin_pct' => 0.75, 'merchant_margin_pct' => 1.5)
+    _, factors = scorer([p]).score(p, Fixtures.operation)
+    assert_in_delta 0.5, factors['margin_advantage']['value'], 1e-6
+  end
+
+  # Маржа хуже соглашения — это забота hard-constraints; скоринг не должен
+  # уходить в минус и торговаться за недопустимого провайдера.
+  def test_never_negative
+    bad = Fixtures.provider('provider_margin_pct' => 3.0, 'merchant_margin_pct' => 1.5)
+    _, factors = scorer([bad]).score(bad, Fixtures.operation)
+    assert_in_delta 0.0, factors['margin_advantage']['value'], 1e-9
+  end
+
+  def test_zero_merchant_margin_does_not_blow_up
+    p = Fixtures.provider('merchant_margin_pct' => 0)
+    _, factors = scorer([p]).score(p, Fixtures.operation)
+    assert_in_delta 0.0, factors['margin_advantage']['value'], 1e-9
+  end
+end
+
+# Во что обошлось распределение — отчёт считает деньги, а не только доли.
+class CostReportTest < Minitest::Test
+  def build(results)
+    pool = RoutingEngine::ProviderPool.new(
+      providers_json: Fixtures.providers_json, overrides: {}, history: Fixtures.history,
+      self_provider_name: 'spacepayments', conversion: {}
+    )
+    ops = results.each_with_index.map do |(_, _), i|
+      RoutingEngine::Operation.new('operation_id' => "op_#{i}", 'created_at' => '2026-07-30T09:00:00+03:00',
+                                   'amount' => 100_000, 'bank' => 'sberbank')
+    end
+    decisions = results.each_with_index.map do |(provider, result), i|
+      { 'operation_id' => "op_#{i}", 'selected_provider' => provider, 'attempts' => [],
+        'simulated_result' => result }
+    end
+    RoutingEngine::ReportBuilder.new(pool: pool, decisions: decisions, period: nil, operations: ops).build
+  end
+
+  # vipay берёт 1.2% -> с 100 000 это 1200 руб.
+  def test_fee_counts_only_approved
+    rep = build([['vipay', 'approved'], ['vipay', 'rejected']])
+    assert_equal 100_000, rep['cost']['approved_volume']
+    assert_equal 1200, rep['cost']['provider_fee']
+  end
+
+  def test_overpay_is_measured_against_cheapest_external
+    rep = build([['vipay', 'approved']])
+    # самый дешёвый внешний — quickpay с 0.8%
+    assert_in_delta 0.8, rep['cost']['cheapest_rate_pct'], 1e-9
+    assert_equal 800, rep['cost']['fee_at_cheapest']
+    assert_equal 400, rep['cost']['overpay_vs_cheapest']
+  end
+
+  def test_effective_rate_is_weighted
+    rep = build([['vipay', 'approved'], ['quickpay', 'approved']])
+    assert_in_delta 1.0, rep['cost']['effective_rate_pct'], 1e-6
+  end
+
+  def test_no_cost_block_without_amounts
+    pool = RoutingEngine::ProviderPool.new(
+      providers_json: Fixtures.providers_json, overrides: {}, history: Fixtures.history,
+      self_provider_name: 'spacepayments', conversion: {}
+    )
+    rep = RoutingEngine::ReportBuilder.new(pool: pool, decisions: [], period: nil).build
+    assert_empty rep['cost']
+  end
+end
+
 # Поведение, когда целевая доля назначена провайдеру, которому нельзя
 # отдать ни одной заявки.
 class UnavailableTargetTest < Minitest::Test
