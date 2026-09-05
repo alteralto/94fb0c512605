@@ -33,6 +33,14 @@
     "expired": 3,
     "success_rate_pct": 50.0
   },
+  "cost": {
+    "approved_volume": 80800,
+    "provider_fee": 956,
+    "effective_rate_pct": 1.183,
+    "cheapest_rate_pct": 0.8,
+    "fee_at_cheapest": 646,
+    "overpay_vs_cheapest": 310
+  },
   "provider_quality": {
     "vipay": {
       "selected": 4,
