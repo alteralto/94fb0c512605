@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стенд роутинга выплат</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alumni+Sans:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Палитра провайдеров проверена валидатором на светлом и тёмном фоне:
+   полоса светлоты, порог цветности, различимость при дальтонизме и в норме,
+   контраст к поверхности — все шесть проверок пройдены в обоих режимах. */
+:root {
+  color-scheme: light;
+  --page: #f7f7f4;
+  --surface: #ffffff;
+  --surface-2: #f1f0ec;
+  --ink: #211f19;
+  --ink-2: #4f4d47;
+  --ink-muted: #76746f;
+  --hairline: rgba(33, 31, 25, 0.15);
+  --hairline-strong: rgba(33, 31, 25, 0.28);
+  --accent: #a97e2c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(175, 128, 32, 0.12);
+  --prov-vipay: #af8020;
+  --prov-payflow: #008e8b;
+  --prov-quickpay: #bd432f;
+  --prov-spacepayments: #535eb8;
+  --good: #2f7d32;
+  --warning: #9a6b12;
+  --serious: #bd432f;
+  --critical: #a52f22;
+  --up: #2f7d32;
+  --down: #a52f22;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0b0a08;
+    --surface: #14130f;
+    --surface-2: #1e1d18;
+    --ink: #e5e4e0;
+    --ink-2: #a9a79f;
+    --ink-muted: #7e7c74;
+    --hairline: rgba(230, 228, 220, 0.16);
+    --hairline-strong: rgba(230, 228, 220, 0.32);
+    --accent: #e0a93a;
+    --accent-ink: #14130f;
+    --accent-soft: rgba(224, 169, 58, 0.14);
+    --prov-vipay: #bb8805;
+    --prov-payflow: #009f98;
+    --prov-quickpay: #ce5439;
+    --prov-spacepayments: #5b67cc;
+    --good: #4f9a52;
+    --warning: #d09a2a;
+    --serious: #ce5439;
+    --critical: #dc6a52;
+    --up: #4f9a52;
+    --down: #dc6a52;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0b0a08;
+  --surface: #14130f;
+  --surface-2: #1e1d18;
+  --ink: #e5e4e0;
+  --ink-2: #a9a79f;
+  --ink-muted: #7e7c74;
+  --hairline: rgba(230, 228, 220, 0.16);
+  --hairline-strong: rgba(230, 228, 220, 0.32);
+  --accent: #e0a93a;
+  --accent-ink: #14130f;
+  --accent-soft: rgba(224, 169, 58, 0.14);
+  --prov-vipay: #bb8805;
+  --prov-payflow: #009f98;
+  --prov-quickpay: #ce5439;
+  --prov-spacepayments: #5b67cc;
+  --good: #4f9a52;
+  --warning: #d09a2a;
+  --serious: #ce5439;
+  --critical: #dc6a52;
+  --up: #4f9a52;
+  --down: #dc6a52;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+header {
+  border-bottom: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  padding: 20px 28px 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+header h1 {
+  margin: 0;
+  font-family: "Alumni Sans", "Onest", sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0.005em;
+}
+header .sub { color: var(--ink-2); font-size: 13px; max-width: 64ch; margin-top: 7px; }
+header .spacer { flex: 1; }
+.nav { display: flex; gap: 2px; align-items: center; }
+.nav a {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.18em; text-decoration: none; color: var(--ink-muted);
+  padding: 7px 12px; border: 1px solid transparent;
+}
+.nav a[aria-current="page"] { color: var(--ink); border-color: var(--hairline-strong); background: var(--surface-2); }
+.nav a:hover { color: var(--accent); }
+.run-state { font-size: 11px; }
+.run-state[data-busy="1"] { color: var(--accent); }
+
+.shell { display: grid; grid-template-columns: 336px 1fr; gap: 22px; padding: 22px 28px 56px; align-items: start; }
+@media (max-width: 1100px) { .shell { grid-template-columns: 1fr; } }
+
+.panel { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); }
+.panel > h2 {
+  margin: 0; padding: 11px 16px; border-bottom: 1px solid var(--hairline);
+  font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.22em; color: var(--ink-muted);
+}
+.panel > .body { padding: 16px; }
+
+aside { position: sticky; top: 22px; display: flex; flex-direction: column; gap: 18px; }
+@media (max-width: 1100px) { aside { position: static; } }
+
+.scenarios { display: flex; flex-direction: column; }
+.scenario {
+  text-align: left; border: 0; border-top: 1px solid var(--hairline); background: none;
+  color: var(--ink); padding: 10px 2px; cursor: pointer;
+  font: inherit; font-size: 13px; display: block; width: 100%;
+}
+.scenario:first-child { border-top: 0; }
+.scenario:hover b { color: var(--accent); }
+.scenario[aria-pressed="true"] { background: var(--accent-soft); padding-left: 9px; padding-right: 9px; }
+.scenario[aria-pressed="true"] b { color: var(--accent); }
+.scenario b { display: block; font-weight: 600; }
+.scenario span { color: var(--ink-muted); font-size: 12px; }
+.scenario:focus-visible, button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.knob { margin-bottom: 14px; }
+.knob:last-child { margin-bottom: 0; }
+.knob .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.knob label { font-size: 13px; font-weight: 500; }
+.knob .val { font-size: 12px; color: var(--accent); font-weight: 600; }
+.knob .hint { font-size: 11px; color: var(--ink-muted); line-height: 1.35; }
+input[type=range] { width: 100%; margin: 5px 0 0; accent-color: var(--accent); }
+input[type=number] {
+  width: 100%; padding: 5px 7px; border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--ink);
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+}
+.grid-params { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.grid-params .full { grid-column: 1 / -1; }
+.param-title {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.18em; color: var(--ink-muted);
+  margin: 16px 0 8px; display: flex; align-items: center; gap: 7px;
+}
+.param-title:first-child { margin-top: 0; }
+.field label { display: block; font-size: 11px; color: var(--ink-muted); margin-bottom: 3px; }
+.switch { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-family: "Onest", sans-serif;
+  font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--ink-muted); cursor: pointer; }
+.switch input { accent-color: var(--accent); margin: 0; }
+
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.export-hint { color: var(--ink-muted); font-size: 12px; margin: 6px 0 0; }
+.btn {
+  font: inherit; font-size: 12px; font-weight: 600; padding: 9px 16px; border-radius: var(--radius);
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+.btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--hairline-strong); }
+.btn.ghost:hover { color: var(--ink); border-color: var(--ink-muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+main { display: flex; flex-direction: column; gap: 18px; }
+
+/* Показатели не равнозначны: отклонение от целей и успешность — то, ради чего
+   стенд крутят, остальное контекст. Разный размер, а не пять одинаковых плиток. */
+.kpis { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); }
+.kpi { background: var(--surface); padding: 14px 16px 15px; grid-column: span 3; }
+.kpi.lead { grid-column: span 6; }
+@media (max-width: 1200px) { .kpi { grid-column: span 6; } }
+@media (max-width: 900px) { .kpi, .kpi.lead { grid-column: span 12; } }
+.kpi .k { font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-muted); }
+/* Пропорциональные цифры: в конденсированном Alumni Sans табличные дают
+   заметную разрядку, а точка занимает ширину цифры — число распадается. */
+.kpi .v { font-family: "Alumni Sans", sans-serif; font-size: 34px; font-weight: 700; line-height: 1.05; margin-top: 6px; }
+.kpi.lead .v { font-size: 54px; color: var(--accent); }
+.kpi .unit { font-family: "Onest", sans-serif; font-size: 0.4em; font-weight: 600; margin-left: 0.22em; color: var(--ink-muted); letter-spacing: 0; }
+.kpi .d { font-size: 11.5px; color: var(--ink-muted); margin-top: 3px; }
+
+.qt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.qt th {
+  text-align: left; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-muted);
+  padding: 0 10px 8px 0; white-space: nowrap;
+}
+.qt td { padding: 8px 10px 8px 0; border-top: 1px solid var(--hairline); white-space: nowrap; }
+.qt th:not(:first-child), .qt td:not(:first-child) { text-align: right; }
+.was { font-size: 11px; color: var(--ink-muted); }
+.op.changed { background: var(--accent-soft); }
+
+.dot { width: 8px; height: 8px; border-radius: 1px; display: inline-block; flex: none; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 980px) { .two-col { grid-template-columns: 1fr; } }
+
+.bar-row { margin-bottom: 15px; }
+.bar-row:last-child { margin-bottom: 0; }
+.bar-head { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+.bar-head .name { font-weight: 600; }
+.bar-head .nums { margin-left: auto; color: var(--ink-2); font-size: 11.5px; }
+.bar-head .delta { font-size: 12px; font-weight: 600; min-width: 46px; text-align: right; }
+.delta.up { color: var(--up); } .delta.down { color: var(--down); } .delta.flat { color: var(--ink-muted); }
+.track { position: relative; height: 8px; background: var(--surface-2); border-radius: 1px; overflow: visible; }
+.fill { height: 100%; border-radius: 1px; transition: width .35s ease; }
+.tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.legend-note { font-size: 11px; color: var(--ink-muted); margin-top: 12px; display: flex; align-items: baseline; gap: 7px; line-height: 1.4; }
+.legend-note i { display: inline-block; width: 2px; height: 10px; background: var(--ink); flex: none; }
+
+.list-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+.list-row .lbl { flex: none; width: 190px; color: var(--ink-2); }
+.list-row .meter { flex: 1; height: 6px; background: var(--surface-2); }
+.list-row .meter i { display: block; height: 100%; background: var(--accent); }
+.list-row .n { width: 34px; text-align: right; font-size: 12px; }
+
+/* Вывод движка нумеруется, а не помечается акцентной полосой слева:
+   номер несёт смысл — на него можно сослаться вслух, полоса даёт только шум. */
+.rec { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--ink-2); }
+.rec:first-child { border-top: 0; padding-top: 2px; }
+.rec-n { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--accent); padding-top: 2px; }
+.empty { color: var(--ink-muted); font-size: 13px; }
+
+.oplist { display: flex; flex-direction: column; }
+.op { border-bottom: 1px solid var(--hairline); }
+.op:last-child { border-bottom: 0; }
+.op-sum {
+  display: grid; grid-template-columns: 78px 1fr 116px 128px 74px 62px 18px;
+  gap: 10px; align-items: center; padding: 11px 16px; cursor: pointer; width: 100%;
+  background: none; border: 0; color: inherit; font: inherit; text-align: left;
+}
+@media (max-width: 860px) { .op-sum { grid-template-columns: 70px 1fr 100px 74px; } .op-sum .hide-sm { display: none; } }
+.op-sum:hover { background: var(--surface-2); }
+.op-sum .amt { font-size: 13px; }
+.op-sum .bank { color: var(--ink-muted); font-size: 12px; }
+.op-sum .chev { color: var(--ink-muted); transition: transform .18s ease; }
+.op[open] .chev { transform: rotate(90deg); }
+/* Не пилюля с заливкой, а цветная метка с текстом: статусов на строке несколько,
+   и три залитых чипа подряд читаются как украшение, а не как состояние. */
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.cascade { padding: 2px 16px 18px 16px; display: none; }
+.op[open] .cascade { display: block; }
+.step { display: grid; grid-template-columns: 14px 1fr; gap: 10px; }
+.rail { display: flex; flex-direction: column; align-items: center; }
+.rail .pip { width: 8px; height: 8px; border-radius: 1px; margin-top: 6px; flex: none; }
+.rail .line { flex: 1; width: 1px; background: var(--hairline-strong); margin: 3px 0; }
+.step-body { padding-bottom: 13px; }
+.step:last-child .step-body { padding-bottom: 0; }
+.step-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.step-head .who { font-weight: 600; }
+.step-why { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.step-det { font-size: 11px; color: var(--ink-muted); margin-top: 4px; word-break: break-word; line-height: 1.45; }
+
+.diffbox { font-size: 12px; color: var(--ink-2); line-height: 1.6; }
+.diffbox code { background: var(--surface-2); padding: 1px 5px; border-radius: 2px; font-size: 11px; font-family: "JetBrains Mono", monospace; }
+.scroll-x { overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Стенд роутинга выплат</h1>
+    <div class="sub">Тот же движок, что пишет routing_decisions_test.json. Крутите параметры — прогон пересчитывается целиком.</div>
+  </div>
+  <div class="spacer"></div>
+  <nav class="nav">
+    <a href="/" aria-current="page">Стенд</a>
+    <a href="/review">Техревью</a>
+  </nav>
+  <div class="run-state mono" id="runState">готов</div>
+</header>
+
+<div class="shell">
+  <aside>
+    <section class="panel">
+      <h2>Сценарий</h2>
+      <div class="body">
+        <div class="scenarios" id="scenarios"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Веса soft-goals</h2>
+      <div class="body" id="weights"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Бизнес-параметры и симуляция</h2>
+      <div class="body" id="params"></div>
+      <div class="body" style="padding-top:0">
+        <div class="actions">
+          <button class="btn" id="run">Пересчитать</button>
+          <button class="btn ghost" id="reset">Сброс</button>
+        </div>
+        <div class="param-title">Выгрузка этого прогона</div>
+        <p class="export-hint">Собранную политику можно унести файлом: <code>strategy.yml</code> кладётся рядом с <code>bin/run.rb</code> и воспроизводит ровно этот прогон.</p>
+        <div class="actions">
+          <button class="btn ghost" id="dl_yml">strategy.yml</button>
+          <button class="btn ghost" id="dl_dec">decisions</button>
+          <button class="btn ghost" id="dl_rep">report</button>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <main>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="two-col">
+      <section class="panel">
+        <h2>Доля заявок против целевой</h2>
+        <div class="body" id="dist"></div>
+      </section>
+      <section class="panel">
+        <h2>Использование дневного лимита</h2>
+        <div class="body" id="util"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Успешность по провайдерам</h2>
+      <div class="body" id="quality"></div>
+    </section>
+
+    <div class="two-col">
+      <section class="panel">
+        <h2>Почему провайдеры отсеивались</h2>
+        <div class="body" id="skips"></div>
+      </section>
+      <section class="panel">
+        <h2>Выводы движка</h2>
+        <div class="body" id="recs"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Журнал решений — разверните заявку, чтобы увидеть каскад</h2>
+      <div class="oplist" id="ops"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Что сейчас отличается от config/strategy.yml</h2>
+      <div class="body diffbox" id="diff"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const PROV_COLOR = n => `var(--prov-${n}, var(--ink-muted))`;
+const fmt = n => new Intl.NumberFormat('ru-RU').format(Math.round(n));
+const pct = n => (Math.round(n * 10) / 10).toFixed(1);
+
+const WEIGHTS = [
+  ['count_share_gap',  'Доля по количеству',   'стратегия 1 — отставание от traffic_percentage'],
+  ['volume_share_gap', 'Доля по объёму',       'стратегия 2 — отставание от volume_share_pct'],
+  ['cascade_priority', 'Очередь в каскаде',    'стратегия 3 — предпочтение по priority'],
+  ['amount_band',      'Диапазон суммы чека',  'стратегия 4 — бонус за попадание в свой диапазон'],
+  ['conversion',       'Конверсия',            'стратегия 5 — предпочтение по conversion_24h'],
+  ['load_headroom',    'Запас до лимитов',     'стратегия 6 — штраф провайдеру, подошедшему вплотную к лимиту'],
+  ['margin_advantage', 'Комиссия провайдера',  'сверх ТЗ — комиссия: среди допущенных выгоднее тот, кто дешевле'],
+  ['turnover_min_gap', 'Мин. дневной оборот',  'стратегия 7 — недобор финобязательства']
+];
+
+const SCENARIOS = [
+  { id: 'base', name: 'Боевая комбинация', note: 'все факторы вместе, веса из config/strategy.yml', override: {} },
+  { id: 'count', name: 'Только доля по количеству', note: 'стратегия 1 в чистом виде',
+    override: { weights: w(  { count_share_gap: 3 } ) } },
+  { id: 'volume', name: 'Только доля по объёму', note: 'стратегия 2 — распределяем рубли, а не штуки',
+    override: { weights: w( { volume_share_gap: 3 } ) } },
+  { id: 'cascade', name: 'Только каскад по priority', note: 'стратегия 3 — классический перебор сверху вниз',
+    override: { weights: w( { cascade_priority: 3 } ) } },
+  { id: 'band', name: 'Только диапазон суммы', note: 'стратегия 4 — маршрут по величине чека',
+    override: { weights: w( { amount_band: 3 } ) } },
+  { id: 'conv', name: 'Только конверсия', note: 'стратегия 5 — гонимся за успешностью',
+    override: { weights: w( { conversion: 3 } ) } },
+  { id: 'load', name: 'Только текущая загрузка', note: 'стратегия 6 — payflow вошёл в очередь на 97% дневного лимита',
+    override: { weights: w( { load_headroom: 3 } ) } },
+  { id: 'cost', name: 'Только комиссия', note: 'сверх ТЗ — гонимся за самым дешёвым допустимым',
+    override: { weights: w( { margin_advantage: 3 } ) } },
+  { id: 'offline', name: 'Провайдер выключен', note: 'payflow отключён — его целевые 35% перераспределяются между доступными',
+    override: { provider_overrides: { payflow: { status: 'disabled' } } } },
+  { id: 'conflict', name: 'Конфликт из ТЗ', note: 'vipay упёрся в дневной лимит, payflow не добрал обязательство 2 млн',
+    override: { provider_overrides: {
+      vipay: { daily_approved_amount: 4990000 },
+      payflow: { daily_approved_amount: 1200000, daily_turnover_min: 2000000 } } } },
+  { id: 'impossible', name: 'Невыполнимая цель', note: 'payflow обязан дать 5 млн при дневном лимите 3 млн',
+    override: { provider_overrides: { payflow: { daily_turnover_min: 5000000 } } } },
+  { id: 'storm', name: 'Шторм отказов', note: '45% отказов и таймаутов — видно каскад и fallback',
+    override: { simulation: { provider_decline_base_rate: 0.45 } } },
+  { id: 'trust', name: 'Верить провайдеру на слово', note: 'конверсия берётся из providers.json без сверки с историей',
+    override: { conversion: { prior_strength: 1000000 } } },
+  { id: 'history', name: 'Верить только истории', note: 'конверсия целиком из operations_history.csv',
+    override: { conversion: { prior_strength: 0 } } }
+];
+
+// Пресет "только один фактор": остальные веса гасим в ноль, чтобы эксперт увидел
+// чистое поведение стратегии, а не смесь.
+function w(active) {
+  const all = {};
+  WEIGHTS.forEach(([key]) => { all[key] = 0; });
+  return Object.assign(all, active);
+}
+
+const REASONS = {
+  top_ranked_by_strategy:        ['выбран — лучший по совокупности факторов', 'good'],
+  next_ranked_after_declines:    ['выбран после отказа предыдущих', 'good'],
+  only_eligible_provider:        ['выбран — единственный допустимый', 'good'],
+  fallback_self_provider:        ['fallback на self-provider', 'warning'],
+  outranked_by_strategy_score:   ['проиграл по скорингу', 'muted'],
+  provider_declined_processing:  ['отказал в обработке', 'serious'],
+  provider_timeout_unknown_status: ['не ответил — статус проверен, выплаты не было', 'serious'],
+  amount_exceeds_limit:              ['сумма выше лимита', 'critical'],
+  amount_below_minimum:              ['сумма ниже минимума', 'critical'],
+  bank_not_in_list:                  ['банк не обслуживается', 'critical'],
+  daily_limit_exceeded:              ['дневной лимит исчерпан', 'critical'],
+  in_progress_count_limit_exceeded:  ['лимит одновременных заявок', 'critical'],
+  in_progress_amount_limit_exceeded: ['лимит суммы in-progress', 'critical'],
+  no_available_requisites:           ['нет свободных реквизитов', 'critical'],
+  margin_exceeds_agreement:          ['маржа хуже соглашения', 'critical'],
+  provider_inactive:                 ['провайдер неактивен', 'critical'],
+  rate_limit_exceeded:               ['превышен rate-limit', 'critical']
+};
+const STATUS_COLOR = { good: 'var(--good)', warning: 'var(--warning)', serious: 'var(--serious)', critical: 'var(--critical)', muted: 'var(--ink-muted)' };
+const RESULT_LABEL = { approved: ['проведена', 'good'], rejected: ['отклонена', 'critical'], expired: ['истекла', 'warning'] };
+
+let STATE = null;
+// Последний отрисованный прогон — из него собираются файлы выгрузки.
+let lastRun = null;
+let prevDist = null;
+// Прошлый прогон в разрезе заявок. Итоговые доли могут совпасть при разных
+// весах, а решения по конкретным заявкам — разойтись; без этого сравнения
+// стенд выглядел бы так, будто ручка ничего не делает.
+let prevDecisions = null;
+let activeScenario = 'base';
+let openOps = new Set(['first']);
+
+const pretty = (data) => JSON.stringify(data, null, 2);
+
+// Выгрузка идёт из уже полученного прогона: файл всегда соответствует тому,
+// что сейчас на экране, а не тому, что лежит в конфиге на диске.
+function bindDownload(id, source) {
+  document.getElementById(id).addEventListener('click', () => {
+    if (!lastRun) return;
+    const [name, text, mime] = source();
+    const url = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+}
+
+async function boot() {
+  const res = await fetch('/api/state');
+  STATE = await res.json();
+  buildScenarios();
+  buildWeights();
+  buildParams();
+  render(STATE.run, false);
+  document.getElementById('run').addEventListener('click', () => recalc());
+  document.getElementById('reset').addEventListener('click', () => applyScenario('base'));
+  bindDownload('dl_yml', () => ['strategy.yml', lastRun.strategy_yml, 'text/yaml']);
+  bindDownload('dl_dec', () => ['routing_decisions.json', pretty(lastRun.decisions), 'application/json']);
+  bindDownload('dl_rep', () => ['routing_report.json', pretty(lastRun.report), 'application/json']);
+}
+
+function buildScenarios() {
+  const host = document.getElementById('scenarios');
+  host.innerHTML = '';
+  SCENARIOS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'scenario';
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(s.id === activeScenario));
+    b.dataset.id = s.id;
+    b.innerHTML = `<b></b><span></span>`;
+    b.querySelector('b').textContent = s.name;
+    b.querySelector('span').textContent = s.note;
+    b.addEventListener('click', () => applyScenario(s.id));
+    host.appendChild(b);
+  });
+}
+
+function buildWeights() {
+  const host = document.getElementById('weights');
+  host.innerHTML = '';
+  WEIGHTS.forEach(([key, label, hint]) => {
+    const base = Number(STATE.base_config.weights[key] ?? 0);
+    const d = document.createElement('div');
+    d.className = 'knob';
+    d.innerHTML = `<div class="row"><label for="w_${key}">${label}</label><span class="val mono" id="v_${key}"></span></div>
+      <input type="range" id="w_${key}" min="0" max="3" step="0.1" value="${base}">
+      <div class="hint">${hint}</div>`;
+    host.appendChild(d);
+    const input = d.querySelector('input');
+    const out = d.querySelector('.val');
+    const sync = () => { out.textContent = Number(input.value).toFixed(1); };
+    sync();
+    input.addEventListener('input', sync);
+    input.addEventListener('change', () => { markCustom(); recalc(); });
+  });
+}
+
+function buildParams() {
+  const host = document.getElementById('params');
+  const providers = STATE.providers.providers.filter(p => p.payment_system !== STATE.base_config.self_provider_name);
+  host.innerHTML = '';
+
+  providers.forEach(p => {
+    const ov = (STATE.base_config.provider_overrides || {})[p.payment_system] || {};
+    const t = document.createElement('div');
+    t.className = 'param-title';
+    // Статус — обычное поле формы, а не скрытая настройка пресета: всё, что
+    // умеет менять сценарий, должно быть видно и руками. Раньше status приходил
+    // только из пресета, а buildOverride собирал override из формы — и выключение
+    // провайдера молча терялось.
+    t.innerHTML = `<span class="dot" style="background:${PROV_COLOR(p.payment_system)}"></span>${p.payment_system}` +
+      `<label class="switch"><input type="checkbox" id="p_${p.payment_system}_active" checked>активен</label>`;
+    host.appendChild(t);
+
+    const g = document.createElement('div');
+    g.className = 'grid-params';
+    g.innerHTML = `
+      <div class="field"><label for="p_${p.payment_system}_turn">мин. оборот, ₽</label>
+        <input type="number" step="100000" id="p_${p.payment_system}_turn" value="${ov.daily_turnover_min ?? 0}"></div>
+      <div class="field"><label for="p_${p.payment_system}_rpm">заявок в минуту</label>
+        <input type="number" step="1" id="p_${p.payment_system}_rpm" value="${ov.requests_per_minute_limit ?? ''}"></div>
+      <div class="field full"><label for="p_${p.payment_system}_day">оборот на сейчас, ₽ (лимит ${fmt(p.daily_amount_limit)})</label>
+        <input type="number" step="100000" id="p_${p.payment_system}_day" value="${p.daily_approved_amount}"></div>`;
+    host.appendChild(g);
+  });
+
+  const sim = document.createElement('div');
+  sim.innerHTML = `<div class="param-title">конверсия и симуляция</div>
+    <div class="grid-params">
+      <div class="field full"><label for="c_prior">доверие к заявленной конверсии, «виртуальных наблюдений»</label>
+        <input type="number" step="1" min="0" id="c_prior" value="${(STATE.base_config.conversion || {}).prior_strength ?? 10}"></div>
+      <div class="field"><label for="s_decline">доля отказов</label>
+        <input type="number" step="0.01" min="0" max="1" id="s_decline" value="${STATE.base_config.simulation.provider_decline_base_rate}"></div>
+      <div class="field"><label for="s_seed">seed</label>
+        <input type="number" step="1" id="s_seed" value="${STATE.base_config.simulation.seed}"></div>
+    </div>`;
+  host.appendChild(sim);
+
+  host.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { markCustom(); recalc(); }));
+}
+
+function markCustom() {
+  activeScenario = 'custom';
+  document.querySelectorAll('.scenario').forEach(b => b.setAttribute('aria-pressed', 'false'));
+}
+
+function applyScenario(id) {
+  const s = SCENARIOS.find(x => x.id === id);
+  if (!s) return;
+  activeScenario = id;
+  document.querySelectorAll('.scenario').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+
+  // Пресет = база из strategy.yml + его собственные правки. Сначала возвращаем
+  // все контролы к базовым значениям, потом накладываем сценарий.
+  WEIGHTS.forEach(([key]) => {
+    const val = s.override.weights?.[key] ?? STATE.base_config.weights[key] ?? 0;
+    const input = document.getElementById('w_' + key);
+    input.value = val;
+    document.getElementById('v_' + key).textContent = Number(val).toFixed(1);
+  });
+
+  STATE.providers.providers.filter(p => p.payment_system !== STATE.base_config.self_provider_name).forEach(p => {
+    const baseOv = (STATE.base_config.provider_overrides || {})[p.payment_system] || {};
+    const scenOv = s.override.provider_overrides?.[p.payment_system] || {};
+    setVal(`p_${p.payment_system}_turn`, scenOv.daily_turnover_min ?? baseOv.daily_turnover_min ?? 0);
+    setVal(`p_${p.payment_system}_rpm`, scenOv.requests_per_minute_limit ?? baseOv.requests_per_minute_limit ?? '');
+    setVal(`p_${p.payment_system}_day`, scenOv.daily_approved_amount ?? p.daily_approved_amount);
+    document.getElementById(`p_${p.payment_system}_active`).checked = (scenOv.status ?? p.status) !== 'disabled';
+  });
+
+  setVal('c_prior', s.override.conversion?.prior_strength ?? (STATE.base_config.conversion || {}).prior_strength ?? 10);
+  setVal('s_decline', s.override.simulation?.provider_decline_base_rate ?? STATE.base_config.simulation.provider_decline_base_rate);
+  setVal('s_seed', s.override.simulation?.seed ?? STATE.base_config.simulation.seed);
+  recalc();
+}
+
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
+function numOrNull(id) { const el = document.getElementById(id); if (!el || el.value === '') return null; const n = Number(el.value); return Number.isFinite(n) ? n : null; }
+
+function buildOverride() {
+  const weights = {};
+  WEIGHTS.forEach(([key]) => { weights[key] = Number(document.getElementById('w_' + key).value); });
+
+  const provider_overrides = {};
+  STATE.providers.providers.forEach(p => {
+    if (p.payment_system === STATE.base_config.self_provider_name) return;
+    provider_overrides[p.payment_system] = {
+      status: document.getElementById(`p_${p.payment_system}_active`).checked ? 'active' : 'disabled',
+      daily_turnover_min: numOrNull(`p_${p.payment_system}_turn`) ?? 0,
+      requests_per_minute_limit: numOrNull(`p_${p.payment_system}_rpm`),
+      daily_approved_amount: numOrNull(`p_${p.payment_system}_day`) ?? p.daily_approved_amount
+    };
+  });
+
+  return {
+    weights,
+    provider_overrides,
+    conversion: { prior_strength: numOrNull('c_prior') ?? 0 },
+    simulation: { provider_decline_base_rate: numOrNull('s_decline') ?? 0, seed: numOrNull('s_seed') ?? 1 }
+  };
+}
+
+let inflight = false;
+async function recalc() {
+  if (inflight) return;
+  inflight = true;
+  const state = document.getElementById('runState');
+  state.dataset.busy = '1';
+  state.textContent = 'считаем…';
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildOverride())
+    });
+    const run = await res.json();
+    if (run.error) throw new Error(run.error);
+    render(run, true);
+    state.textContent = 'пересчитано';
+  } catch (e) {
+    state.textContent = 'ошибка: ' + e.message;
+  } finally {
+    state.dataset.busy = '0';
+    inflight = false;
+  }
+}
+
+function render(run, withDelta) {
+  lastRun = run;
+  const rep = run.report;
+  const dist = rep.distribution;
+
+  const changed = new Map();
+  if (prevDecisions) {
+    run.decisions.forEach(d => {
+      const was = prevDecisions[d.operation_id];
+      if (was && was !== d.selected_provider) changed.set(d.operation_id, was);
+    });
+  }
+
+  renderKpis(run, rep, changed, withDelta);
+  renderDist(dist, withDelta);
+  renderUtil(rep.projected_daily_utilization);
+  renderQuality(rep.provider_quality, rep.results);
+  renderSkips(rep.skip_reasons);
+  renderRecs(rep.recommendations);
+  renderOps(run.decisions, changed);
+  renderDiff(run.config);
+
+  prevDist = Object.fromEntries(Object.entries(dist).map(([k, v]) => [k, v.share_pct]));
+  prevDecisions = Object.fromEntries(run.decisions.map(d => [d.operation_id, d.selected_provider]));
+}
+
+function renderKpis(run, rep, changed, withDelta) {
+  const total = rep.total_operations || run.decisions.length;
+  const res = rep.results || {};
+  const drift = Object.values(rep.distribution).reduce((s, v) => s + Math.abs(v.share_pct - goal(v)), 0);
+  const cost = rep.cost || {};
+  const cascaded = run.decisions.filter(d => d.attempts.some(a =>
+    ['provider_declined_processing', 'provider_timeout_unknown_status'].includes(a.reason))).length;
+
+  // Первые два — то, ради чего стенд крутят; остальное контекст, потому и мельче.
+  document.getElementById('kpis').innerHTML = [
+    ['Отклонение от целей', pct(drift), 'п.п.', 'сумма модулей по провайдерам, меньше — точнее план', 'lead'],
+    ['Успешность', pct(res.success_rate_pct ?? 0), '%', `${res.approved ?? 0} проведено, ${res.rejected ?? 0} отклонено`, 'lead'],
+    ['Комиссия', cost.effective_rate_pct === undefined ? '—' : pct(cost.effective_rate_pct), '%',
+      cost.overpay_vs_cheapest === undefined ? 'нет проведённых операций'
+        : `${fmt(cost.provider_fee)} ₽ с ${fmt(cost.approved_volume)} ₽; переплата к самому дешёвому ${fmt(cost.overpay_vs_cheapest)} ₽`, ''],
+    ['Заявок', total, '', 'в очереди прогона', ''],
+    ['Каскад сработал', cascaded, '', 'заявок ушло на повторную попытку', ''],
+    ['Решения изменились', withDelta ? changed.size : '—', '',
+      withDelta ? 'сменили провайдера с прошлого прогона' : 'первый прогон, сравнивать не с чем', '']
+  ].map(([k, v, unit, d, cls]) =>
+    `<div class="kpi ${cls}"><div class="k">${k}</div>` +
+    `<div class="v">${v}${unit ? `<span class="unit">${unit}</span>` : ''}</div>` +
+    `<div class="d">${d}</div></div>`).join('');
+}
+
+function renderQuality(quality, results) {
+  const host = document.getElementById('quality');
+  const rows = Object.entries(quality || {}).filter(([, q]) => q.selected > 0);
+  if (!rows.length) { host.innerHTML = '<div class="empty">нет данных</div>'; return; }
+
+  host.innerHTML = `<div class="scroll-x"><table class="qt">
+    <thead><tr><th>провайдер</th><th>взял</th><th>провёл</th><th>отказ / таймаут</th><th>задержка</th>
+      <th>заявлено</th><th>по истории</th><th>в скоринге</th></tr></thead>
+    <tbody>${rows.map(([name, q]) => {
+      const fails = q.declined + q.timeouts;
+      const obs = q.conversion_observed_pct;
+      const gap = obs === null ? 0 : obs - q.conversion_declared_pct;
+      return `<tr>
+        <td><span class="dot" style="background:${PROV_COLOR(name)}"></span> ${name}</td>
+        <td class="mono">${q.selected}</td>
+        <td class="mono">${q.approved}</td>
+        <td class="mono">${fails ? `${q.declined} / ${q.timeouts}` : '—'}</td>
+        <td class="mono">${q.avg_latency_sec} с</td>
+        <td class="mono">${pct(q.conversion_declared_pct)}%</td>
+        <td class="mono" style="color:${Math.abs(gap) >= 15 ? 'var(--critical)' : 'var(--ink)'}">${
+          obs === null ? '—' : pct(obs) + '%'}${q.history_sample ? ` <span class="was">n=${q.history_sample}</span>` : ''}</td>
+        <td class="mono">${pct(q.conversion_used_pct)}%</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>
+    <div class="legend-note">«заявлено» — conversion_24h из providers.json, «по истории» — факт из operations_history.csv. Красным помечено расхождение больше 15 п.п.: такому снапшоту верить нельзя, в скоринг идёт сглаженная оценка.</div>`;
+}
+
+function renderDist(dist, withDelta) {
+  const max = Math.max(100, ...Object.values(dist).map(v => Math.max(v.share_pct, v.target_pct)));
+  document.getElementById('dist').innerHTML = Object.entries(dist).map(([name, v]) => {
+    let delta = '<span class="delta flat">—</span>';
+    if (withDelta && prevDist && prevDist[name] !== undefined) {
+      const d = v.share_pct - prevDist[name];
+      const cls = Math.abs(d) < 0.05 ? 'flat' : (d > 0 ? 'up' : 'down');
+      const sign = Math.abs(d) < 0.05 ? '—' : (d > 0 ? '+' : '−') + pct(Math.abs(d));
+      delta = `<span class="delta ${cls} mono">${sign}</span>`;
+    }
+    return `<div class="bar-row">
+      <div class="bar-head">
+        <span class="dot" style="background:${PROV_COLOR(name)}"></span>
+        <span class="name">${name}</span>
+        <span class="nums mono">${v.count} шт · ${pct(v.share_pct)}% при цели ${goalText(v)}</span>
+        ${delta}
+      </div>
+      <div class="track">
+        <div class="fill" style="width:${v.share_pct / max * 100}%;background:${PROV_COLOR(name)}"></div>
+        <div class="tick" style="left:${goal(v) / max * 100}%"></div>
+      </div>
+    </div>`;
+  }).join('') + `<div class="legend-note"><i></i> засечка — целевая доля; если провайдер недоступен, его доля перераспределяется и цель становится эффективной; изменение справа — сдвиг с прошлого прогона</div>`;
+}
+
+// Цель, с которой роутер реально сверяется: эффективная, если часть пула недоступна.
+function goal(v) {
+  return v.effective_target_pct === undefined ? v.target_pct : v.effective_target_pct;
+}
+
+function goalText(v) {
+  const g = goal(v);
+  return Math.abs(g - v.target_pct) < 0.05
+    ? `${pct(v.target_pct)}%`
+    : `${pct(g)}% (в providers.json ${pct(v.target_pct)}%)`;
+}
+
+function renderUtil(util) {
+  const host = document.getElementById('util');
+  const rows = Object.entries(util || {});
+  if (!rows.length) { host.innerHTML = '<div class="empty">нет данных</div>'; return; }
+  host.innerHTML = rows.map(([name, v]) => {
+    const hot = v.utilization_pct >= 80;
+    return `<div class="bar-row">
+      <div class="bar-head">
+        <span class="dot" style="background:${PROV_COLOR(name)}"></span>
+        <span class="name">${name}</span>
+        <span class="nums mono">${fmt(v.used)} из ${fmt(v.limit)} ₽</span>
+        <span class="delta ${hot ? 'down' : 'flat'} mono">${pct(v.utilization_pct)}%</span>
+      </div>
+      <div class="track"><div class="fill" style="width:${Math.min(v.utilization_pct, 100)}%;background:${hot ? 'var(--critical)' : PROV_COLOR(name)}"></div></div>
+    </div>`;
+  }).join('') + `<div class="legend-note">от 80% движок отдельно предупреждает в выводах</div>`;
+}
+
+function renderSkips(skips) {
+  const host = document.getElementById('skips');
+  const rows = Object.entries(skips || {}).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) { host.innerHTML = '<div class="empty">никого не отсеяли</div>'; return; }
+  const max = Math.max(...rows.map(r => r[1]));
+  host.innerHTML = rows.map(([reason, n]) => {
+    const label = (REASONS[reason] || [reason])[0];
+    return `<div class="list-row"><span class="lbl">${label}</span>
+      <span class="meter"><i style="width:${n / max * 100}%"></i></span>
+      <span class="n mono">${n}</span></div>`;
+  }).join('');
+}
+
+function renderRecs(recs) {
+  const host = document.getElementById('recs');
+  if (!recs || !recs.length) { host.innerHTML = '<div class="empty">отклонений, требующих вмешательства, движок не нашёл</div>'; return; }
+  host.innerHTML = recs.map((r, i) =>
+    `<div class="rec"><span class="rec-n">${String(i + 1).padStart(2, '0')}</span><span class="rec-t"></span></div>`).join('');
+  host.querySelectorAll('.rec-t').forEach((el, i) => { el.textContent = recs[i]; });
+}
+
+function renderOps(decisions, changed) {
+  const host = document.getElementById('ops');
+  const queue = Object.fromEntries(STATE.queue.map(q => [q.operation_id, q]));
+  host.innerHTML = '';
+
+  decisions.forEach((d, idx) => {
+    const q = queue[d.operation_id] || {};
+    const [rLabel, rStatus] = RESULT_LABEL[d.simulated_result] || [d.simulated_result, 'muted'];
+    const was = changed && changed.get(d.operation_id);
+    const wrap = document.createElement('div');
+    wrap.className = was ? 'op changed' : 'op';
+    const wasOpen = openOps.has(d.operation_id) || (idx === 0 && openOps.has('first'));
+    if (wasOpen) wrap.setAttribute('open', '');
+
+    wrap.innerHTML = `
+      <button class="op-sum" type="button" aria-expanded="${wasOpen}">
+        <span class="mono">${d.operation_id}</span>
+        <span><span class="amt mono">${fmt(q.amount || 0)} ₽</span> <span class="bank">${q.bank || ''}</span></span>
+        <span class="badge"><span class="dot" style="background:${PROV_COLOR(d.selected_provider)}"></span>${d.selected_provider}${was ? `<span class="was">← был ${was}</span>` : ''}</span>
+        <span class="badge hide-sm"><span class="dot" style="background:${STATUS_COLOR[rStatus]}"></span>${rLabel}</span>
+        <span class="mono hide-sm" style="font-size:12px;color:var(--ink-muted)">${d.latency_sec} с</span>
+        <span class="mono hide-sm" style="font-size:12px;color:var(--ink-muted)">${d.attempts.length} поп.</span>
+        <span class="chev">›</span>
+      </button>
+      <div class="cascade"></div>`;
+
+    const cas = wrap.querySelector('.cascade');
+    d.attempts.forEach((a, i) => {
+      const [label, status] = REASONS[a.reason] || [a.reason, 'muted'];
+      const step = document.createElement('div');
+      step.className = 'step';
+      step.innerHTML = `
+        <div class="rail"><span class="pip" style="background:${STATUS_COLOR[status]}"></span>${i < d.attempts.length - 1 ? '<span class="line"></span>' : ''}</div>
+        <div class="step-body">
+          <div class="step-head">
+            <span class="dot" style="background:${PROV_COLOR(a.provider)}"></span>
+            <span class="who">${a.provider}</span>
+            <span class="badge" style="font-size:11px">${a.decision === 'selected' ? 'выбран' : 'пропущен'}</span>
+          </div>
+          <div class="step-why"></div>
+          <div class="step-det mono"></div>
+        </div>`;
+      step.querySelector('.step-why').textContent = label;
+      step.querySelector('.step-det').textContent = a.details || '';
+      cas.appendChild(step);
+    });
+
+    const btn = wrap.querySelector('.op-sum');
+    btn.addEventListener('click', () => {
+      const open = wrap.hasAttribute('open');
+      if (open) { wrap.removeAttribute('open'); openOps.delete(d.operation_id); if (idx === 0) openOps.delete('first'); }
+      else { wrap.setAttribute('open', ''); openOps.add(d.operation_id); }
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+    host.appendChild(wrap);
+  });
+}
+
+function renderDiff(config) {
+  const base = STATE.base_config;
+  const lines = [];
+  WEIGHTS.forEach(([key, label]) => {
+    const a = Number(base.weights[key] ?? 0), b = Number(config.weights[key] ?? 0);
+    if (Math.abs(a - b) > 1e-9) lines.push(`вес «${label}»: <code>${a.toFixed(1)}</code> → <code>${b.toFixed(1)}</code>`);
+  });
+  STATE.providers.providers.forEach(p => {
+    const name = p.payment_system;
+    const bo = (base.provider_overrides || {})[name] || {};
+    const co = (config.provider_overrides || {})[name] || {};
+    if ((co.daily_turnover_min ?? 0) !== (bo.daily_turnover_min ?? 0))
+      lines.push(`${name}, мин. оборот: <code>${fmt(bo.daily_turnover_min ?? 0)}</code> → <code>${fmt(co.daily_turnover_min ?? 0)}</code>`);
+    if ((co.requests_per_minute_limit ?? null) !== (bo.requests_per_minute_limit ?? null))
+      lines.push(`${name}, заявок в минуту: <code>${bo.requests_per_minute_limit ?? '—'}</code> → <code>${co.requests_per_minute_limit ?? '—'}</code>`);
+    if (co.daily_approved_amount !== undefined && co.daily_approved_amount !== p.daily_approved_amount)
+      lines.push(`${name}, оборот на сейчас: <code>${fmt(p.daily_approved_amount)}</code> → <code>${fmt(co.daily_approved_amount)}</code>`);
+  });
+  const basePrior = (base.conversion || {}).prior_strength ?? 10;
+  const curPrior = (config.conversion || {}).prior_strength;
+  if (curPrior !== undefined && curPrior !== basePrior)
+    lines.push(`доверие к заявленной конверсии: <code>${basePrior}</code> → <code>${curPrior}</code>`);
+
+  const sim = config.simulation || {};
+  if (sim.provider_decline_base_rate !== base.simulation.provider_decline_base_rate)
+    lines.push(`доля отказов: <code>${base.simulation.provider_decline_base_rate}</code> → <code>${sim.provider_decline_base_rate}</code>`);
+  if (sim.seed !== base.simulation.seed)
+    lines.push(`seed: <code>${base.simulation.seed}</code> → <code>${sim.seed}</code>`);
+
+  document.getElementById('diff').innerHTML = lines.length
+    ? lines.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:var(--ink-muted)">Ни строчки кода при этом не менялось — всё это поля config/strategy.yml.</div>`
+    : '<div class="empty">параметры совпадают с config/strategy.yml</div>';
+}
+
+boot();
+</script>
+</body>
+</html>
