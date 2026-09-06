@@ -40,11 +40,12 @@ DEFAULT_QUEUE = QUEUES.key?('operations_queue_10.json') ? 'operations_queue_10.j
 # Стенд рассчитан на публичный адрес, поэтому у каждого соединения есть бюджет.
 # Без них одна пустая TCP-сессия занимает поток навсегда (медленный клиент
 # держит gets), а один POST с выдуманным Content-Length просит гигабайт памяти.
-MAX_BODY_BYTES  = 256 * 1024
+MAX_BODY_BYTES  = 1024 * 1024  # своя очередь приходит телом запроса, отсюда мегабайт
 MAX_HEADER_LINE = 8 * 1024
 MAX_HEADERS     = 64
 SOCKET_TIMEOUT  = 15
 MAX_CONCURRENT  = 24
+MAX_QUEUE_OPS   = 2000  # своя очередь: потолок, чтобы прогон не съел машину
 RATE_WINDOW     = 10    # секунд
 RATE_LIMIT      = 40    # запросов с одного адреса за окно
 
@@ -58,22 +59,43 @@ MIME = { '.html' => 'text/html', '.css' => 'text/css', '.js' => 'application/jav
 SERVE_ROOTS = %w[web docs].freeze
 BINARY_EXT = %w[.png .mp4].freeze
 
+# Своя очередь приходит телом запроса, поэтому проверяем её здесь, а не в движке:
+# понятная ошибка на входе лучше, чем NoMethodError из глубины пайплайна.
+def normalize_queue(raw)
+  raise ArgumentError, 'очередь должна быть массивом заявок' unless raw.is_a?(Array)
+  raise ArgumentError, 'очередь пуста' if raw.empty?
+  if raw.size > MAX_QUEUE_OPS
+    raise ArgumentError, "в очереди #{raw.size} заявок, потолок стенда #{MAX_QUEUE_OPS}"
+  end
+
+  raw.each_with_index do |op, i|
+    raise ArgumentError, "заявка №#{i + 1} не объект" unless op.is_a?(Hash)
+
+    %w[operation_id amount].each do |field|
+      raise ArgumentError, "в заявке №#{i + 1} нет поля #{field}" unless op.key?(field)
+    end
+  end
+  raw
+end
+
 def run_pipeline(override)
   params = override.is_a?(Hash) ? override.dup : {}
   # Выбор очереди — не часть политики: иначе имя файла утекло бы в strategy.yml
   # и выгруженный конфиг перестал бы читаться движком.
   queue_name = params.delete('queue_file')
-  queue_name = DEFAULT_QUEUE unless QUEUES.key?(queue_name)
+  inline = params.delete('queue_inline')
+  queue_name = DEFAULT_QUEUE unless inline || QUEUES.key?(queue_name)
+  queue = inline ? normalize_queue(inline) : QUEUES[queue_name]
   config = RoutingEngine::Pipeline.deep_merge(BASE_CONFIG, params)
   result = RoutingEngine::Pipeline.new(
-    config: config, providers_json: PROVIDERS, history: HISTORY, queue_raw: QUEUES[queue_name]
+    config: config, providers_json: PROVIDERS, history: HISTORY, queue_raw: queue
   ).run
   # strategy_yml — та самая политика, которую собрали ползунками, в том же
   # формате, что читает bin/run.rb. Без неё стенд остаётся демкой: покрутил,
   # посмотрел и унести нечего.
   { 'decisions' => result.decisions, 'report' => result.report,
     'config' => config, 'strategy_yml' => config.to_yaml,
-    'queue_file' => queue_name, 'queue' => QUEUES[queue_name] }
+    'queue_file' => queue_name, 'queue' => queue }
 end
 
 def initial_state
@@ -169,6 +191,9 @@ def handle(client)
   end
 rescue JSON::ParserError => e
   respond(client, '400 Bad Request', JSON.generate('error' => "некорректный JSON: #{e.message}"), 'application/json')
+rescue ArgumentError => e
+  # Своя очередь не прошла проверку — это ошибка данных пользователя, не сбой стенда.
+  respond(client, '400 Bad Request', JSON.generate('error' => e.message), 'application/json')
 rescue IO::TimeoutError
   # Клиент открыл сокет и замолчал — поток не ждём, освобождаем.
   nil

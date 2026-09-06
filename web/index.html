@@ -163,6 +163,11 @@ aside { position: sticky; top: 22px; display: flex; flex-direction: column; gap:
   color: var(--ink); background: var(--surface); border: 1px solid var(--hairline-strong);
   border-radius: 4px; }
 .queue-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--ink-muted); }
+.queue-upload { display: inline-block; margin-top: 8px; padding: 6px 10px; font-size: 12px;
+  color: var(--ink-2); background: var(--surface); border: 1px solid var(--hairline-strong);
+  border-radius: 4px; cursor: pointer; }
+.queue-upload:hover { color: var(--accent); border-color: var(--accent); }
+.queue-note.bad { color: var(--danger, #b3261e); }
 .scenario {
   text-align: left; border: 0; border-top: 1px solid var(--hairline); background: none;
   color: var(--ink); padding: 10px 2px; cursor: pointer;
@@ -328,8 +333,11 @@ main { display: flex; flex-direction: column; gap: 18px; }
         <div class="queue-pick">
           <label for="queue_file">очередь заявок</label>
           <select id="queue_file"></select>
-          <p class="queue-note">Новая выборка — файл <code>data/operations_queue*.json</code>;
-          стенд подхватывает её при запуске, движок не меняется.</p>
+          <label class="queue-upload" for="queue_upload">Загрузить свою очередь…</label>
+          <input type="file" id="queue_upload" accept="application/json,.json" hidden>
+          <p class="queue-note" id="queue_hint">Файлы <code>data/operations_queue*.json</code>
+          подхватываются при запуске. Свой JSON — массив заявок, прогон идёт по нему,
+          движок и веса те же.</p>
         </div>
       </div>
     </section>
@@ -540,7 +548,36 @@ function buildQueues() {
     if (q.name === currentQueue) opt.selected = true;
     sel.appendChild(opt);
   });
-  sel.addEventListener('change', () => { currentQueue = sel.value; recalc(); });
+  sel.addEventListener('change', () => {
+    currentQueue = sel.value;
+    if (sel.value !== '__uploaded__') uploadedQueue = null;
+    recalc();
+  });
+
+  document.getElementById('queue_upload').addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const hint = document.getElementById('queue_hint');
+    try {
+      const ops = JSON.parse(await file.text());
+      if (!Array.isArray(ops) || !ops.length) throw new Error('ожидался непустой массив заявок');
+      uploadedQueue = ops;
+      let opt = sel.querySelector('option[value="__uploaded__"]');
+      if (!opt) { opt = document.createElement('option'); opt.value = '__uploaded__'; sel.appendChild(opt); }
+      opt.textContent = `${file.name} — ${ops.length} заявок`;
+      sel.value = '__uploaded__';
+      currentQueue = '__uploaded__';
+      hint.classList.remove('bad');
+      hint.textContent = `Загружено: ${file.name}, заявок ${ops.length}. Прогон идёт по этому файлу.`;
+      recalc();
+    } catch (e) {
+      uploadedQueue = null;
+      hint.classList.add('bad');
+      hint.textContent = `Файл не подошёл: ${e.message}`;
+    } finally {
+      ev.target.value = '';
+    }
+  });
 }
 function buildScenarios() {
   const host = document.getElementById('scenarios');
@@ -678,6 +715,7 @@ function buildOverride() {
 
   return {
     queue_file: currentQueue,
+    queue_inline: uploadedQueue,
     weights,
     provider_overrides,
     conversion: { prior_strength: numOrNull('c_prior') ?? 0 },
@@ -688,6 +726,9 @@ function buildOverride() {
 // Какая очередь сейчас в работе. Меняется селектором над сценариями:
 // прогон и выгрузка идут по выбранным данным, а не по одной зашитой выборке.
 let currentQueue = null;
+// Загруженная руками очередь живёт только в этой вкладке: на сервер она уходит
+// телом запроса и никуда не сохраняется.
+let uploadedQueue = null;
 let inflight = false;
 async function recalc() {
   if (inflight) return;
