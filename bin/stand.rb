@@ -114,6 +114,12 @@ def handle(client)
   address = (client.peeraddr[3] rescue 'unknown')
   return respond(client, '429 Too Many Requests', 'слишком часто', 'text/plain') if rate_limited?(address)
 
+  # Браузер всё чаще пробует https сам. TLS-рукопожатие начинается с 0x16: без
+  # этой проверки мы читаем его как строку запроса и молчим до таймаута — для
+  # человека это неотличимо от упавшего сайта. Обрываем сразу, чтобы браузер
+  # быстро откатился на http.
+  return if (client.recv(1, Socket::MSG_PEEK) rescue nil) == "\x16"
+
   request_line = client.gets(MAX_HEADER_LINE)
   return if request_line.nil?
 
