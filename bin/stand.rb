@@ -30,7 +30,12 @@ HOST = ENV.fetch('STAND_HOST', '127.0.0.1')
 BASE_CONFIG = RoutingEngine::ConfigLoader.load(File.join(ROOT, 'config', 'strategy.yml'))
 HISTORY     = RoutingEngine::HistoryStats.new(File.join(ROOT, 'data', 'operations_history.csv'))
 PROVIDERS   = JSON.parse(File.read(File.join(ROOT, 'data', 'providers.json')))
-QUEUE       = JSON.parse(File.read(File.join(ROOT, 'data', 'operations_queue_10.json')))
+# Очереди подхватываются из data/ по маске, а не прибиты одной константой:
+# когда организаторы присылают новую выборку, её достаточно положить рядом.
+QUEUES = Dir[File.join(ROOT, 'data', 'operations_queue*.json')].sort.to_h do |path|
+  [File.basename(path), JSON.parse(File.read(path))]
+end.freeze
+DEFAULT_QUEUE = QUEUES.key?('operations_queue_10.json') ? 'operations_queue_10.json' : QUEUES.keys.first
 
 # Стенд рассчитан на публичный адрес, поэтому у каждого соединения есть бюджет.
 # Без них одна пустая TCP-сессия занимает поток навсегда (медленный клиент
@@ -54,22 +59,30 @@ SERVE_ROOTS = %w[web docs].freeze
 BINARY_EXT = %w[.png .mp4].freeze
 
 def run_pipeline(override)
-  config = RoutingEngine::Pipeline.deep_merge(BASE_CONFIG, override)
+  params = override.is_a?(Hash) ? override.dup : {}
+  # Выбор очереди — не часть политики: иначе имя файла утекло бы в strategy.yml
+  # и выгруженный конфиг перестал бы читаться движком.
+  queue_name = params.delete('queue_file')
+  queue_name = DEFAULT_QUEUE unless QUEUES.key?(queue_name)
+  config = RoutingEngine::Pipeline.deep_merge(BASE_CONFIG, params)
   result = RoutingEngine::Pipeline.new(
-    config: config, providers_json: PROVIDERS, history: HISTORY, queue_raw: QUEUE
+    config: config, providers_json: PROVIDERS, history: HISTORY, queue_raw: QUEUES[queue_name]
   ).run
   # strategy_yml — та самая политика, которую собрали ползунками, в том же
   # формате, что читает bin/run.rb. Без неё стенд остаётся демкой: покрутил,
   # посмотрел и унести нечего.
   { 'decisions' => result.decisions, 'report' => result.report,
-    'config' => config, 'strategy_yml' => config.to_yaml }
+    'config' => config, 'strategy_yml' => config.to_yaml,
+    'queue_file' => queue_name, 'queue' => QUEUES[queue_name] }
 end
 
 def initial_state
   {
     'base_config' => BASE_CONFIG,
     'providers' => PROVIDERS,
-    'queue' => QUEUE,
+    'queue' => QUEUES[DEFAULT_QUEUE],
+    'queue_files' => QUEUES.map { |name, ops| { 'name' => name, 'size' => ops.size } },
+    'queue_file' => DEFAULT_QUEUE,
     'run' => run_pipeline({})
   }
 end
@@ -179,7 +192,7 @@ end
 
 server = TCPServer.new(HOST, PORT)
 puts "Стенд роутинга: http://#{HOST}:#{PORT}"
-puts "Очередь: #{QUEUE.size} заявок, провайдеров: #{PROVIDERS.size}. Ctrl+C — стоп."
+puts "Очереди: #{QUEUES.map { |n, q| "#{n} (#{q.size})" }.join(", ")}. Ctrl+C — стоп."
 
 loop do
   client = server.accept
