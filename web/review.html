@@ -117,6 +117,10 @@ header .spacer { flex: 1; }
   font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent);
 }
 .nav a:hover { color: var(--accent); border-color: var(--accent); }
+/* Ссылка на репозиторий — не третья вкладка, а уход со стенда:
+   без рамки, чтобы не спорила с переключателем страниц. */
+.nav a.nav-code { border-color: transparent; color: var(--ink-muted); }
+.nav a.nav-code:hover { color: var(--accent); border-color: var(--hairline-strong); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .doc { max-width: 1080px; margin: 0 auto; padding: 32px 28px 80px; }
@@ -212,6 +216,7 @@ footer {
   <nav class="nav">
     <a href="/">Стенд</a>
     <a href="/review" aria-current="page">Техревью</a>
+    <a class="nav-code" href="https://github.com/alteralto/94fb0c512605" target="_blank" rel="noopener">Код ↗</a>
   </nav>
 </header>
 
