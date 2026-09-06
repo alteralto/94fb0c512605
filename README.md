@@ -67,9 +67,18 @@ ruby test/routing_test.rb
 ruby bin/stand.rb
 ```
 
-Без аргументов `bin/run.rb` берёт публичные `data/*` и пишет
-`routing_decisions_test.json` / `routing_report_test.json` в корень репозитория —
-то, что требуется к сдаче.
+Файлы сдачи в корне репозитория — `routing_decisions_test.json` и
+`routing_report_test.json` — получены прогоном закрытой очереди на 90 заявок:
+
+```bash
+ruby bin/run.rb data/operations_queue_90.json data/providers.json \
+                data/operations_history.csv config/strategy.yml \
+                routing_decisions_test.json routing_report_test.json
+```
+
+Очередь подставляется первым аргументом — движку всё равно, десять в ней заявок
+или девяносто. Файлы `routing_decisions_10.json` / `routing_report_10.json` — тот же
+движок на публичной десятке, на которой сходится автопроверка организаторов.
 
 ## Как это выглядит
 
