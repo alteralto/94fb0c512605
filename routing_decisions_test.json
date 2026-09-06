@@ -1,0 +1,262 @@
+[
+  {
+    "operation_id": "op_101",
+    "selected_provider": "vipay",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.576 (cascade_priority +0.600, conversion +0.399, count_share_gap +0.360, load_headroom +0.200, margin_advantage +0.060, volume_share_gap -0.043)"
+      },
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=1.350 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, margin_advantage +0.100, load_headroom +0.028)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=1.339 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "approved",
+    "latency_sec": 52
+  },
+  {
+    "operation_id": "op_102",
+    "selected_provider": "payflow",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=alfa"
+      },
+      {
+        "provider": "payflow",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.339 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, margin_advantage +0.100, load_headroom +0.017)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=1.339 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "rejected",
+    "latency_sec": 58
+  },
+  {
+    "operation_id": "op_103",
+    "selected_provider": "quickpay",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "amount_exceeds_limit",
+        "details": "150000 > limit_amount_max 100000"
+      },
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "amount_exceeds_limit",
+        "details": "150000 > limit_amount_max 50000"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.739 (amount_band +0.400, conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "expired",
+    "latency_sec": 539
+  },
+  {
+    "operation_id": "op_104",
+    "selected_provider": "quickpay",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=gazprombank"
+      },
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=gazprombank"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.339 (conversion +0.349, count_share_gap +0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "approved",
+    "latency_sec": 55
+  },
+  {
+    "operation_id": "op_105",
+    "selected_provider": "vipay",
+    "attempts": [
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=tinkoff"
+      },
+      {
+        "provider": "vipay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.096 (cascade_priority +0.600, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, margin_advantage +0.060, volume_share_gap -0.043)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=0.739 (conversion +0.349, count_share_gap -0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "rejected",
+    "latency_sec": 34
+  },
+  {
+    "operation_id": "op_106",
+    "selected_provider": "vipay",
+    "attempts": [
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "amount_exceeds_limit",
+        "details": "52000 > limit_amount_max 50000"
+      },
+      {
+        "provider": "vipay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.496 (cascade_priority +0.600, amount_band +0.400, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, margin_advantage +0.060, volume_share_gap -0.043)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=0.739 (conversion +0.349, count_share_gap -0.300, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "approved",
+    "latency_sec": 52
+  },
+  {
+    "operation_id": "op_107",
+    "selected_provider": "payflow",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "amount_below_minimum",
+        "details": "800 < limit_amount_min 1000"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "amount_below_minimum",
+        "details": "800 < limit_amount_min 1000"
+      },
+      {
+        "provider": "payflow",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.355 (amount_band +0.400, count_share_gap +0.360, conversion +0.312, cascade_priority +0.300, volume_share_gap -0.150, margin_advantage +0.100, load_headroom +0.033)"
+      }
+    ],
+    "simulated_result": "approved",
+    "latency_sec": 77
+  },
+  {
+    "operation_id": "op_108",
+    "selected_provider": "quickpay",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=raiffeisen"
+      },
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=raiffeisen"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.039 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "expired",
+    "latency_sec": 539
+  },
+  {
+    "operation_id": "op_109",
+    "selected_provider": "vipay",
+    "attempts": [
+      {
+        "provider": "payflow",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=vtb"
+      },
+      {
+        "provider": "vipay",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.094 (cascade_priority +0.600, conversion +0.399, load_headroom +0.200, count_share_gap -0.120, margin_advantage +0.060, volume_share_gap -0.045)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=1.039 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140)"
+      }
+    ],
+    "simulated_result": "approved",
+    "latency_sec": 52
+  },
+  {
+    "operation_id": "op_110",
+    "selected_provider": "payflow",
+    "attempts": [
+      {
+        "provider": "vipay",
+        "decision": "skipped",
+        "reason": "bank_not_in_list",
+        "details": "bank=alfa"
+      },
+      {
+        "provider": "payflow",
+        "decision": "selected",
+        "reason": "top_ranked_by_strategy",
+        "details": "score=1.162 (amount_band +0.400, conversion +0.312, cascade_priority +0.300, count_share_gap +0.180, volume_share_gap -0.150, margin_advantage +0.100, load_headroom +0.020)"
+      },
+      {
+        "provider": "quickpay",
+        "decision": "skipped",
+        "reason": "outranked_by_strategy_score",
+        "details": "score=1.099 (conversion +0.349, cascade_priority +0.200, load_headroom +0.200, volume_share_gap +0.150, margin_advantage +0.140, count_share_gap +0.060)"
+      }
+    ],
+    "simulated_result": "expired",
+    "latency_sec": 631
+  }
+]

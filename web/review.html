@@ -118,6 +118,13 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Номер раздела вынесен на поля: документ читают по разделам и ссылаются
    на них вслух («вопрос по четвёртому»), поэтому нумерация здесь несёт смысл. */
 section { display: grid; grid-template-columns: 64px 1fr; gap: 22px; margin-bottom: 46px; }
+/* Колонка грида по умолчанию растягивается под самое широкое содержимое, и
+   BPMN-схема шириной 1948px распирала всю страницу вместо того, чтобы
+   прокручиваться внутри своей рамки. */
+section > * { min-width: 0; }
+@media (max-width: 640px) {
+  section { grid-template-columns: 1fr; gap: 8px; margin-bottom: 34px; }
+}
 @media (max-width: 780px) { section { grid-template-columns: 1fr; gap: 10px; } .num { font-size: 26px !important; } }
 .num {
   font-family: "Alumni Sans", sans-serif; font-size: 46px; font-weight: 700;
